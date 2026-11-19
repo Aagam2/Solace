@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MsixPackagingToolTemplate
+    xmlns="http://schemas.microsoft.com/msix/packaging/msixpackagingtool/template/2022">
+    <Settings
+        AllowTelemetry="false"
+        ApplyACLsToPackageFiles="true"
+        GenerateCommandLineFile="true"
+        AllowPromptForPassword="false">
+    </Settings>
+    <Installer
+        Path="solace"
+        Arguments=""
+        InstallLocation="C:\Program Files\Solace\Solace">
+    </Installer>
+    <PackageInformation
+        PackageName="app.solace.desktop"
+        PackageDisplayName="Solace"
+        PublisherName="CN=Solace"
+        PublisherDisplayName="Solace"
+        Version="0.1.0.0"
+        PackageDescription="A private, local-first personal diary and memory archive">
+        <Capabilities>
+            <Capability Name="runFullTrust" />
+            
+        </Capabilities>
+        <Applications>
+            <Application
+                Id="Solace"
+                Description="A private, local-first personal diary and memory archive"
+                DisplayName="Solace"
+                ExecutableName="solace"
+                EntryPoint="Windows.FullTrustApplication">
+                
+            </Application>
+        </Applications>
+        <Resources>
+            <Resource Language="en-us" />
+        </Resources>
+        <Dependencies>
+            <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.19041.0" />
+        </Dependencies>
+        <Properties>
+            <Framework>false</Framework>
+            <DisplayName>Solace</DisplayName>
+            <PublisherDisplayName>Solace</PublisherDisplayName>
+            <Description>A private, local-first personal diary and memory archive</Description>
+            <Logo>Assets\AppIcon.png</Logo>
+        </Properties>
+    </PackageInformation>
+    <SaveLocation PackagePath="solace.msix" />
+    <PackageIntegrity>
+        <CertificatePath></CertificatePath>
+    </PackageIntegrity>
+</MsixPackagingToolTemplate>

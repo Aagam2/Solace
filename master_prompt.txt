@@ -1,0 +1,2153 @@
+# Solace — Complete Development Prompt for Codex
+
+I recommend building **Solace as a local-first desktop journaling application**, with an architecture that can eventually support AI-powered memory retrieval.
+
+The idea is to build something more powerful than a traditional diary: a personal archive where you can record your experiences, attach photographs and videos, organize memories, and eventually ask questions about your past.
+
+For example, you should eventually be able to ask:
+
+- "What was I doing around November 15, 2026?"
+- "When did I last meet Rahul?"
+- "What books was I reading in August?"
+- "Find the entry where I mentioned having an argument with someone."
+- "Summarize everything interesting that happened in October."
+- "What have I written about my career over the last six months?"
+
+### Recommended technology stack
+
+| Component | Technology |
+|---|---|
+| Desktop framework | Wails v3 |
+| Backend | Go |
+| Frontend | React + TypeScript |
+| Styling | Tailwind CSS |
+| UI components | shadcn/ui |
+| Database | SQLite |
+| Text editor | Tiptap |
+| Full-text search | SQLite FTS5 |
+| Images/videos | Local filesystem |
+| State management | Zustand, where necessary |
+| Data fetching | TanStack Query, if useful |
+| Export | Markdown, HTML, JSON, ZIP |
+| Future AI | Local or optional external LLM |
+| Future semantic search | Embeddings and vector search |
+
+**Why Wails v3?** Wails v3 was officially released on October 26, 2026, and is now the stable version recommended for new projects. It supports React, TypeScript, Go services, generated bindings, and native desktop functionality. [Wails](https://wails.io/blog/wails-v3-released/?utm_source=chatgpt.com)
+
+SQLite's FTS5 extension is particularly useful because it provides indexed full-text search without requiring a separate search service. [SQLite](https://www.sqlite.org/fts5.html?utm_source=chatgpt.com)
+
+### Development approach
+
+I would divide the project into **nine parts**.
+
+| Part | Focus | Outcome |
+|---|---|---|
+| 1 | Project setup and architecture | Working Wails application |
+| 2 | Diary CRUD and date ranges | Create and manage entries |
+| 3 | Rich-text editor and media | Images, videos, formatted text |
+| 4 | Calendar, timeline, and navigation | Browse past entries |
+| 5 | Search and organization | Find memories quickly |
+| 6 | Export, import, and backup | Portable, recoverable data |
+| 7 | Privacy and reliability | Safe long-term personal storage |
+| 8 | Desktop polish and packaging | Usable standalone application |
+| 9 | Future AI architecture | Foundation for querying your memories |
+
+**Important:** Codex should complete one part at a time, run tests, and stop for your approval before starting the next part. That way, you can actually use the application throughout development rather than discovering problems after everything has been implemented.
+
+The following is the master prompt I'd give Codex.
+
+## Master Codex Prompt
+
+Copy the following into Codex.
+
+# Project: Solace
+## A Local-First Personal Diary and Memory Archive
+
+You are a senior software engineer, desktop application architect, and UI/UX designer.
+
+Your task is to design and implement a production-quality personal diary desktop application called **Solace**.
+
+Solace is a private, offline-first personal journaling application that allows users to record daily experiences, memories, thoughts, photographs, videos, and other personal information.
+
+The long-term vision is to transform Solace into a personal memory archive that can eventually be queried using an LLM.
+
+For now, the application must work completely offline.
+
+This is a real application intended for daily use over many years, not a prototype or demonstration.
+
+Prioritize maintainability, performance, data integrity, reliability, and user experience.
+
+---
+
+# 1. Core Requirements
+
+## Technology Stack
+
+Use:
+
+- Go for backend logic.
+- Wails v3 for desktop application functionality.
+- React with TypeScript for the frontend.
+- Tailwind CSS for styling.
+- shadcn/ui for reusable UI components.
+- SQLite for database storage.
+- Tiptap for rich-text editing.
+- SQLite FTS5 for full-text search.
+
+Use additional libraries only when justified.
+
+Prefer stable, actively maintained dependencies.
+
+Use the official Wails v3 documentation:
+https://wails.io/
+
+Do not use deprecated Wails v2 APIs.
+
+## Supported Platforms
+
+Primary development environment:
+
+- Linux (Ubuntu).
+
+Future targets:
+
+- Windows 10/11.
+- macOS.
+- Other supported Linux distributions.
+
+Avoid platform-specific assumptions whenever possible.
+
+The application must not require a backend server, cloud service, external database, or internet connection at runtime.
+
+Use native Wails bindings for communication between React and Go.
+
+Do not create an unnecessary HTTP server.
+
+## Guiding Principles
+
+1. Offline by default.
+2. User owns all data.
+3. No telemetry or analytics.
+4. No authentication required for the initial version.
+5. No cloud dependencies.
+6. Reliable storage and recovery.
+7. Clean, modern UI.
+8. Keyboard-friendly workflows.
+9. Extensible architecture.
+10. Future AI integration without major architectural rewrites.
+
+A packaged production build should not depend on Node.js, Python, or a separately installed Go runtime.
+
+Platform WebView and native system dependencies may still be required.
+
+---
+
+# 2. Application Vision
+
+Solace should feel like a combination of:
+
+- A personal diary.
+- A memory archive.
+- A chronological journal.
+- A private notebook.
+- A personal digital scrapbook.
+
+It should support recording both mundane daily activities and significant life events.
+
+Examples:
+
+### Example A: Traditional daily entry
+
+Date: November 15, 2026
+
+Title: A Quiet Sunday
+
+Content:
+
+"Spent most of the day reading and working on my personal projects. In the evening, I went out with friends."
+
+Attachments:
+
+- 2 photographs.
+- 1 video.
+
+Tags:
+
+- Personal
+- Friends
+
+Mood:
+
+- Happy
+
+### Example B: Multi-day entry
+
+Start Date: November 15, 2026
+
+End Date: November 16, 2026
+
+Title: Weekend Trip
+
+Content:
+
+"Spent two days traveling with friends. We visited several places and took photographs."
+
+Attachments:
+
+- 15 photographs.
+- 3 videos.
+
+Tags:
+
+- Travel
+- Friends
+
+### Example C: Multiple entries on the same day
+
+November 15, 2026:
+
+1. Morning Thoughts
+2. Meeting with Friends
+3. Evening Reflections
+
+All three are separate entries.
+
+### Example D: Retroactive entry
+
+Today is November 20, but the user wants to document something that happened on November 3.
+
+The application must allow selecting any historical date.
+
+The entry's actual creation timestamp should remain November 20, while its journal date is November 3.
+
+This distinction is important.
+
+---
+
+# PART 1 — PROJECT INITIALIZATION AND ARCHITECTURE
+
+## Objective
+
+Create the technical foundation for Solace.
+
+## Requirements
+
+Initialize a Wails v3 application using React and TypeScript.
+
+Configure:
+
+- Tailwind CSS.
+- shadcn/ui.
+- SQLite.
+- Go application services.
+- Frontend/backend communication.
+- Database migrations.
+- Application settings.
+- Structured error handling.
+- Logging.
+- Development tooling.
+
+Use a clear directory structure.
+
+Suggested structure:
+
+solace/
+- frontend/
+  - src/
+    - components/
+    - features/
+    - hooks/
+    - lib/
+    - pages/
+    - stores/
+    - types/
+- internal/
+  - app/
+  - database/
+  - diary/
+  - media/
+  - search/
+  - export/
+  - backup/
+  - settings/
+- migrations/
+- docs/
+- tests/
+- main.go
+- README.md
+
+Adapt this structure if the Wails v3 project template requires a different layout.
+
+Avoid unnecessary abstraction.
+
+## Local Storage
+
+The application's data must not be stored inside its installation directory.
+
+Use the operating system's standard user data directory.
+
+For example:
+
+Linux:
+`~/.local/share/solace/`
+
+Possible structure:
+
+solace/
+- solace.db
+- media/
+  - images/
+  - videos/
+  - audio/
+  - documents/
+- thumbnails/
+- backups/
+- logs/
+
+Use platform-appropriate paths on Windows and macOS.
+
+Never assume that the application is installed in a writable directory.
+
+## Database Initialization
+
+On first launch:
+
+1. Determine the appropriate application data directory.
+2. Create missing directories.
+3. Initialize SQLite.
+4. Run pending migrations.
+5. Initialize default settings.
+6. Open the main application window.
+
+On later launches:
+
+1. Locate existing data.
+2. Validate database accessibility.
+3. Run necessary migrations.
+4. Load settings.
+5. Open the application without modifying existing journal content.
+
+Use SQLite foreign keys and appropriate indexing.
+
+Evaluate WAL mode and configure SQLite safely for a desktop application.
+
+## UI Foundation
+
+Create a modern desktop layout.
+
+Suggested layout:
+
+Left Sidebar:
+- Today
+- Timeline
+- Calendar
+- All Entries
+- Favorites
+- Tags
+- Search
+- Settings
+
+Main Area:
+- Selected page content.
+
+Include:
+
+- Light theme.
+- Dark theme.
+- System theme detection.
+- Collapsible sidebar.
+- Consistent typography.
+- Loading states.
+- Empty states.
+- Error states.
+
+The app must look polished even before diary functionality is implemented.
+
+Use a restrained, typography-focused design suitable for long-form writing.
+
+## Tests
+
+Implement and run tests for:
+
+1. First-time database initialization.
+2. Reopening an existing database.
+3. Creating the application data directory.
+4. Applying database migrations.
+5. Handling an unavailable or unwritable data directory.
+6. Backend/frontend communication.
+7. Loading and saving application settings.
+
+## Manual Acceptance Tests
+
+I should be able to:
+
+- Launch Solace.
+- See the main desktop window.
+- Switch between light and dark themes.
+- Navigate the sidebar.
+- Close and reopen the application.
+- Verify that the database persists.
+- Launch the app with networking disabled.
+
+## Completion Requirements
+
+Before proceeding:
+
+- Run Go tests.
+- Run frontend tests.
+- Run TypeScript checks.
+- Run linting.
+- Verify a development build launches.
+
+Document exactly how to run the application.
+
+STOP after Part 1.
+
+Do not implement Part 2 until I explicitly approve.
+
+---
+
+# PART 2 — DIARY ENTRIES AND DATE RANGES
+
+## Objective
+
+Implement complete diary entry management.
+
+This is the application's central feature.
+
+## Entry Types
+
+Support:
+
+1. Single-day entries.
+2. Multi-day entries.
+3. Multiple entries on the same date.
+4. Entries created retroactively.
+5. Draft entries.
+6. Entries without titles.
+
+Do not enforce a one-entry-per-day restriction.
+
+## Entry Data Model
+
+Each entry should contain:
+
+- Unique ID.
+- Optional title.
+- Rich-text content.
+- Plain-text representation.
+- Start date.
+- End date.
+- Created timestamp.
+- Updated timestamp.
+- Optional mood.
+- Favorite status.
+- Draft status.
+- Optional location text.
+- Tags.
+- Attachments.
+- Optional user-defined display order.
+
+Use UUIDs or another stable ID strategy that will remain suitable for importing and exporting entries.
+
+Store journal dates separately from creation timestamps.
+
+Use unambiguous date representations.
+
+Journal dates must not shift because of UTC conversion or daylight saving time.
+
+## Date Range Semantics
+
+A journal entry covers an inclusive date range:
+
+[start_date, end_date]
+
+Examples:
+
+November 15 – November 16:
+
+- Appears on November 15.
+- Appears on November 16.
+- Remains one underlying entry.
+
+November 15 – November 20:
+
+- Appears in calendar views for all six dates.
+- Is not duplicated in the database.
+
+Allow editing the start and end dates.
+
+Validate:
+
+start_date <= end_date
+
+Allow multiple entries with overlapping ranges.
+
+Do not automatically merge entries merely because their dates overlap.
+
+## Core Operations
+
+Implement:
+
+- Create entry.
+- Read entry.
+- Update entry.
+- Delete entry.
+- List entries.
+- Duplicate entry.
+- Mark favorite.
+- Remove favorite.
+- Save as draft.
+- Publish draft.
+- Change dates.
+- Edit title.
+- Edit content.
+
+Deletion should initially use a recoverable trash system.
+
+Permanent deletion should require confirmation.
+
+## Entry Editor
+
+The entry creation workflow should be intuitive.
+
+When creating an entry:
+
+1. Default to today's date.
+2. Allow changing the start date.
+3. Allow specifying an optional end date.
+4. Allow entering a title.
+5. Allow writing content.
+6. Allow saving.
+
+Provide a clear date-range selector.
+
+For example:
+
+Date: November 15, 2026
+
+Checkbox or toggle:
+"Spans multiple days"
+
+If enabled:
+
+Start: November 15, 2026
+End: November 16, 2026
+
+The interface should display:
+
+November 15–16, 2026
+
+Handle ranges crossing months and years correctly.
+
+## Autosave
+
+Implement safe autosaving.
+
+Requirements:
+
+- Debounced saving.
+- Visible save status.
+- No unnecessary database writes.
+- No loss of previously saved content.
+- Save pending changes when navigating away.
+- Handle write failures visibly.
+- Prevent stale writes from overwriting newer content.
+
+Consider preserving a recoverable local draft when a database write fails.
+
+## Entry Listing
+
+Display entries ordered by journal dates.
+
+Provide:
+
+- Newest first.
+- Oldest first.
+- Recently updated.
+- Favorites first.
+
+Show useful metadata:
+
+- Title.
+- Date or date range.
+- Short content preview.
+- Attachment count.
+- Mood.
+- Tags.
+
+## Tests
+
+Test:
+
+1. Creating a single-day entry.
+2. Creating a multi-day entry.
+3. Creating multiple entries on the same date.
+4. Editing an entry.
+5. Deleting and restoring an entry.
+6. Saving a draft.
+7. Editing dates.
+8. Entries spanning month boundaries.
+9. Entries spanning year boundaries.
+10. Invalid date ranges.
+11. Retroactive entries.
+12. Restarting the application after saving.
+13. Autosave under rapid editing.
+14. Date ranges overlapping each other.
+
+## Manual Acceptance Test
+
+Create the following entries:
+
+Entry A:
+November 15, 2026
+
+Entry B:
+November 15–16, 2026
+
+Entry C:
+November 16, 2026
+
+Entry D:
+November 15–20, 2026
+
+Verify:
+
+- All four remain independent.
+- Entries appear on appropriate dates.
+- Editing Entry B does not modify another entry.
+- Reopening Solace preserves all data.
+
+STOP after Part 2.
+
+---
+
+# PART 3 — RICH-TEXT EDITOR AND MEDIA ATTACHMENTS
+
+## Objective
+
+Create a pleasant writing experience with support for multimedia.
+
+## Rich-Text Editor
+
+Use Tiptap.
+
+Support:
+
+- Paragraphs.
+- Headings.
+- Bold.
+- Italic.
+- Underline.
+- Strikethrough.
+- Bullet lists.
+- Numbered lists.
+- Checklists.
+- Blockquotes.
+- Hyperlinks.
+- Horizontal rules.
+- Undo.
+- Redo.
+- Keyboard shortcuts.
+
+Optional:
+
+- Tables.
+- Code blocks.
+- Inline highlighting.
+
+Avoid an excessively complicated toolbar.
+
+The writing experience should feel minimal and distraction-free.
+
+## Content Storage
+
+Choose a canonical structured representation for rich-text content.
+
+Tiptap JSON is acceptable.
+
+Also maintain or derive a plain-text representation for searching and future AI processing.
+
+Do not rely on HTML alone as the application's canonical storage format.
+
+Plan for document schema evolution.
+
+## Images
+
+Allow attaching:
+
+- JPEG.
+- PNG.
+- WebP.
+- GIF.
+- Other supported common image formats.
+
+Features:
+
+- File picker.
+- Drag-and-drop.
+- Clipboard paste.
+- Inline images.
+- Image gallery.
+- Image captions.
+- Image reordering.
+- Click-to-enlarge.
+- Image thumbnails.
+
+Store imported media in Solace's application data directory.
+
+Do not rely on the original file remaining available.
+
+Do not encode large images directly into SQLite rows.
+
+## Videos
+
+Allow attaching:
+
+- MP4.
+- WebM.
+- MOV, when supported by the platform.
+
+Features:
+
+- Import video.
+- Display video attachment.
+- Play video within the application when supported.
+- Pause.
+- Seek.
+- Show duration when available.
+- Open externally as a fallback.
+
+Do not assume all operating-system WebViews support identical video codecs.
+
+Provide useful errors when playback is unsupported.
+
+## Additional Attachments
+
+Support:
+
+- Audio files.
+- PDF documents.
+- Text files.
+- Other arbitrary file attachments.
+
+For unsupported media formats, provide an option to open the file using its default operating-system application.
+
+## Media Storage Strategy
+
+Use an attachment database table.
+
+Suggested fields:
+
+- ID.
+- Entry ID.
+- Original filename.
+- Stored filename.
+- Relative storage path.
+- MIME type.
+- File size.
+- Created timestamp.
+- Optional caption.
+- Display order.
+- Optional checksum.
+- Optional metadata JSON.
+
+Never use user-supplied filenames directly as storage paths.
+
+Generate safe internal filenames.
+
+Prevent path traversal.
+
+Keep attachment paths relative to the Solace data directory to support portable backups.
+
+Validate file types and sizes.
+
+## Media Import Reliability
+
+Use a safe import process.
+
+For example:
+
+1. Select file.
+2. Validate file.
+3. Copy into temporary application storage.
+4. Verify successful copy.
+5. Move to final destination.
+6. Update database metadata.
+7. Clean up temporary files.
+
+Ensure failed imports do not leave broken database references.
+
+Do not delete the original user's file.
+
+## Media Deletion
+
+Removing an attachment from an entry should not accidentally delete unrelated media.
+
+If deduplication or shared media references are implemented, handle reference counting correctly.
+
+## Tests
+
+Test:
+
+1. Adding an image.
+2. Adding multiple images.
+3. Adding a video.
+4. Adding a PDF.
+5. Pasting an image.
+6. Reordering attachments.
+7. Removing attachments.
+8. Restarting the application.
+9. Opening attachments after restart.
+10. Duplicate filenames.
+11. Missing media files.
+12. Unsupported codecs.
+13. Interrupted file imports.
+14. Files with unusual characters in their names.
+15. Large attachments.
+
+## Manual Acceptance Test
+
+Create an entry titled:
+
+"My Weekend"
+
+Attach:
+
+- 5 photographs.
+- 2 videos.
+- 1 PDF.
+
+Write formatted text between the images.
+
+Close Solace.
+
+Move or delete the original imported files outside Solace.
+
+Reopen Solace.
+
+All imported attachments must still be accessible.
+
+STOP after Part 3.
+
+---
+
+# PART 4 — CALENDAR, TIMELINE, AND NAVIGATION
+
+## Objective
+
+Make browsing years of diary entries intuitive.
+
+## Calendar View
+
+Implement a monthly calendar.
+
+Each date should indicate whether an entry exists.
+
+Possible indicators:
+
+- Small dot.
+- Entry count.
+- Mood indicator.
+- Attachment indicator.
+
+Clicking a date should display entries covering that date.
+
+Multi-day entries must appear on every covered date.
+
+## Timeline View
+
+Implement a chronological timeline.
+
+Group entries by:
+
+- Year.
+- Month.
+- Day.
+
+Example:
+
+2026
+
+November
+
+November 16
+- Weekend Trip
+- Evening Reflection
+
+November 15
+- Weekend Trip
+- A Quiet Sunday
+
+October
+
+...
+
+The same multi-day entry can appear under multiple dates when appropriate, but clicking it must open the same entry ID.
+
+Avoid displaying enormous repeated content blocks.
+
+## Timeline Navigation
+
+Provide:
+
+- Jump to today.
+- Jump to specific date.
+- Jump to month.
+- Jump to year.
+- Previous entry.
+- Next entry.
+
+Support efficient navigation through thousands of entries.
+
+Use pagination or virtualization where appropriate.
+
+## Today Dashboard
+
+Create a homepage showing:
+
+- Today's date.
+- Quick create entry.
+- Entries covering today.
+- Recently edited entries.
+- Recent memories.
+
+Include a small "On This Day" section.
+
+For example:
+
+"On this day, 2 years ago..."
+
+Show entries whose journal date ranges cover the same month/day in previous years.
+
+This must work with multi-day entries.
+
+## Additional Features
+
+Implement:
+
+- Favorite entries.
+- Pinned entries.
+- Quick navigation.
+- A distraction-free reading mode.
+
+Avoid excessive dashboards and statistics.
+
+This is primarily a writing application.
+
+## Tests
+
+Test:
+
+1. Calendar rendering.
+2. Month navigation.
+3. Year navigation.
+4. Multi-day entries spanning months.
+5. Multi-day entries spanning years.
+6. Multiple entries on one date.
+7. Opening an entry from the timeline.
+8. Jumping to a historical date.
+9. "On This Day" matching.
+10. Years with no entries.
+11. Large datasets.
+
+## Performance Test
+
+Generate synthetic data:
+
+- 10,000 entries.
+- Several thousand tags.
+- Several thousand attachment metadata records.
+
+Verify that basic timeline and calendar navigation remain responsive.
+
+Do not load the entire journal into frontend memory unnecessarily.
+
+STOP after Part 4.
+
+---
+
+# PART 5 — SEARCH, TAGS, AND ORGANIZATION
+
+## Objective
+
+Allow users to find information recorded years earlier.
+
+## Full-Text Search
+
+Use SQLite FTS5.
+
+Search across:
+
+- Entry titles.
+- Plain-text entry content.
+- Tags.
+- Attachment captions, where appropriate.
+
+Example search:
+
+"Interview"
+
+Results should show matching entries.
+
+Highlight matching text.
+
+Provide a short context snippet.
+
+## Search Filters
+
+Support filtering by:
+
+- Start date.
+- End date.
+- Date range.
+- Tags.
+- Mood.
+- Favorites.
+- Entries containing images.
+- Entries containing videos.
+- Draft status.
+
+Define date-range filtering clearly.
+
+When filtering by a date interval, an entry should match if its journal date range overlaps the selected interval.
+
+Example:
+
+Search interval:
+November 16–18
+
+Entry:
+November 15–20
+
+This entry must match.
+
+## Search Behavior
+
+Search must support:
+
+- Partial words where practical.
+- Multiple words.
+- Case-insensitive matching.
+- Sorting by relevance.
+- Sorting by journal date.
+- Combining text search with filters.
+
+Implement safe query handling.
+
+Do not construct SQL by concatenating untrusted search text.
+
+Maintain the FTS index when entries are created, edited, or deleted.
+
+Provide a way to rebuild the search index.
+
+## Tags
+
+Allow users to:
+
+- Create tags.
+- Rename tags.
+- Delete tags.
+- Assign multiple tags to entries.
+- Filter by tags.
+
+Examples:
+
+- Personal
+- Work
+- Travel
+- Family
+- Books
+- Friends
+- Projects
+- Health
+
+Do not hardcode these tags.
+
+They are only examples.
+
+## Mood Tracking
+
+Provide optional mood selection.
+
+Suggested defaults:
+
+- Very Happy
+- Happy
+- Neutral
+- Sad
+- Very Sad
+
+Allow leaving mood unset.
+
+Avoid requiring mood tracking for every entry.
+
+## Bookmarks and Favorites
+
+Allow users to favorite important entries.
+
+Provide a dedicated favorites page.
+
+## Tests
+
+Test:
+
+1. Search after entry creation.
+2. Search after editing an entry.
+3. Search after deleting an entry.
+4. Search with multiple words.
+5. Search with no results.
+6. Search with special characters.
+7. Search within date ranges.
+8. Tag filtering.
+9. Combined text and tag filtering.
+10. Filtering multi-day entries.
+11. Rebuilding the search index.
+12. Search after restarting the application.
+13. Search with thousands of entries.
+
+## Manual Acceptance Test
+
+Create entries containing:
+
+- "Went to the bookstore."
+- "Had an interview today."
+- "Started reading a new book."
+- "Prepared for a technical interview."
+
+Searching for "interview" should return the two relevant entries.
+
+Filtering by "Books" should only return tagged entries.
+
+Search must work without internet access.
+
+STOP after Part 5.
+
+---
+
+# PART 6 — EXPORT, IMPORT, AND BACKUP
+
+## Objective
+
+Ensure the user always owns their information.
+
+This is one of the most important parts of Solace.
+
+The application must never lock the user's memories into a proprietary format.
+
+## Export Formats
+
+Support at least:
+
+1. Markdown.
+2. HTML.
+3. JSON.
+4. Complete portable ZIP archive.
+
+### Markdown Export
+
+Allow exporting the entire diary into a readable folder structure.
+
+Example:
+
+Solace-Export/
+- README.md
+- entries/
+  - 2026/
+    - 11/
+      - 2026-11-15-a-quiet-sunday.md
+      - 2026-11-15_to_2026-11-16-weekend-trip.md
+- media/
+  - images/
+  - videos/
+  - documents/
+
+Ensure filename collisions cannot overwrite entries.
+
+Include stable entry IDs in filenames or metadata when necessary.
+
+Each Markdown file should contain human-readable metadata.
+
+Example:
+
+---
+id: entry-uuid
+title: Weekend Trip
+start_date: 2026-11-15
+end_date: 2026-11-16
+created_at: ...
+updated_at: ...
+tags:
+  - Travel
+  - Friends
+mood: Happy
+---
+
+# Weekend Trip
+
+Spent two days traveling with friends.
+
+![Photo](../../../media/images/photo-1.jpg)
+
+The export must remain readable even without Solace.
+
+Avoid absolute filesystem paths.
+
+### HTML Export
+
+Support exporting entries into readable HTML.
+
+Prefer a self-contained local HTML archive with relative media links and a simple index page.
+
+It must work offline in a browser.
+
+Include:
+
+- Titles.
+- Dates.
+- Content.
+- Images.
+- Links to videos and other attachments.
+
+### JSON Export
+
+Export all structured data.
+
+Include:
+
+- Schema/export version.
+- Entries.
+- Date ranges.
+- Tags.
+- Moods.
+- Attachment metadata.
+- Entry relationships.
+- Relevant application metadata.
+
+Do not include machine-specific absolute paths.
+
+The JSON format should be documented.
+
+### Complete Archive Export
+
+Create a ZIP containing everything necessary to reconstruct the journal.
+
+Suggested layout:
+
+solace-backup.zip
+
+- manifest.json
+- database/
+  - solace.db
+- exports/
+  - journal.json
+- entries/
+  - ...
+- media/
+  - ...
+- README.md
+
+A complete archive should include:
+
+- All diary entries.
+- All attachments.
+- Tags.
+- Relevant settings.
+- Stable IDs.
+- Database schema/version information.
+- Checksums where appropriate.
+
+The archive must be portable between machines.
+
+## Export UX
+
+Provide an export screen.
+
+Options:
+
+- Export entire diary.
+- Export selected date range.
+- Export selected entries.
+- Include/exclude attachments.
+- Choose export format.
+- Select destination.
+
+Show:
+
+- Progress.
+- Success/failure.
+- Output path.
+
+Handle cancellation safely.
+
+## Import
+
+Implement importing complete Solace archives.
+
+Support:
+
+- Restoring into an empty journal.
+- Validating archive structure.
+- Checking supported schema versions.
+- Verifying media integrity.
+- Reporting missing files.
+- Preventing path traversal.
+- Avoiding partial restores.
+
+Do not overwrite an existing journal without an explicit confirmation and a recoverable backup.
+
+Use a restore strategy that can recover from failed imports.
+
+For an initial version, restoring a complete archive may replace the current journal after explicit confirmation.
+
+Document this behavior clearly.
+
+Merging two journals can be a future feature.
+
+## Automatic Backups
+
+Implement optional scheduled local backups.
+
+Options:
+
+- Daily.
+- Weekly.
+- Manual only.
+
+Allow configuring:
+
+- Backup destination.
+- Number of backups retained.
+- Whether attachments are included.
+
+Backups must be consistent.
+
+Use SQLite-supported backup mechanisms rather than blindly copying a live database file.
+
+Media files must also be included when producing a complete backup.
+
+## Tests
+
+Test:
+
+1. Markdown export.
+2. HTML export.
+3. JSON export.
+4. ZIP export.
+5. Export with no entries.
+6. Export with thousands of entries.
+7. Export with multi-day entries.
+8. Export with images and videos.
+9. Duplicate titles.
+10. Duplicate filenames.
+11. Special characters.
+12. Backup integrity.
+13. Restore into an empty journal.
+14. Interrupted export.
+15. Corrupted archive.
+16. Missing attachments.
+17. Invalid archive paths.
+18. Restore rollback after failure.
+
+## Critical Round-Trip Test
+
+1. Create 100 diary entries.
+2. Include overlapping date ranges.
+3. Include tags and moods.
+4. Attach images, videos, and documents.
+5. Export the entire journal.
+6. Initialize a fresh Solace data directory.
+7. Import the archive.
+8. Compare the restored entries with the originals.
+
+Verify:
+
+- Entry counts match.
+- IDs match.
+- Dates match.
+- Titles match.
+- Content matches.
+- Tags match.
+- Attachments match.
+- Media checksums match.
+
+The restored journal must remain fully functional.
+
+STOP after Part 6.
+
+---
+
+# PART 7 — PRIVACY, RELIABILITY, AND DATA SAFETY
+
+## Objective
+
+Make Solace suitable for long-term private use.
+
+## Privacy
+
+The application must not:
+
+- Upload diary entries.
+- Contact analytics servers.
+- Collect telemetry.
+- Require accounts.
+- Send crash reports automatically.
+- Read unrelated user files without authorization.
+
+Network access must not be required for normal operation.
+
+If future functionality requires network access, it must be explicitly opt-in.
+
+## Data Safety
+
+Implement:
+
+- SQLite foreign keys.
+- Database integrity checks.
+- Migration versioning.
+- Safe migration failures.
+- Backup before potentially destructive migrations.
+- Appropriate filesystem permissions.
+- Graceful disk-full handling.
+- Graceful handling of unreadable or missing files.
+
+Do not silently delete damaged data.
+
+## Entry Recovery
+
+Implement a trash system.
+
+Deleted entries should be recoverable until permanently deleted.
+
+Consider a bounded revision-history system for recovering accidentally overwritten entries.
+
+Do not create an unbounded copy of every keystroke.
+
+## Application Lock
+
+Implement optional privacy locking.
+
+Possible initial approach:
+
+- User-configured password.
+- Lock on startup.
+- Lock after inactivity.
+- Manual lock shortcut.
+
+Important:
+
+A UI password lock without database encryption must not be presented as encryption.
+
+Treat full database and media encryption as a separate future feature requiring a carefully designed key-management strategy.
+
+Never store passwords in plaintext.
+
+Do not invent custom cryptography.
+
+## Reliability
+
+The application should handle:
+
+- Unexpected shutdown.
+- Power loss.
+- Database write errors.
+- Missing media.
+- Full disk.
+- Corrupted imports.
+- Repeated rapid saves.
+
+## Tests
+
+Test:
+
+1. Crash/restart behavior.
+2. Disk write failures.
+3. Database integrity checks.
+4. Missing attachment handling.
+5. Trash recovery.
+6. Revision recovery, if implemented.
+7. Migration failure recovery.
+8. Optional application lock.
+9. Offline operation.
+10. Application restart during an interrupted operation.
+
+STOP after Part 7.
+
+---
+
+# PART 8 — DESKTOP EXPERIENCE AND PACKAGING
+
+## Objective
+
+Turn Solace into a polished daily-use desktop application.
+
+## Keyboard Shortcuts
+
+Implement shortcuts for:
+
+- New entry.
+- Save entry.
+- Global search.
+- Navigate to today.
+- Toggle sidebar.
+- Toggle reading mode.
+- Open settings.
+
+Use platform-appropriate shortcuts.
+
+Allow shortcut customization later if practical.
+
+## Writing Experience
+
+Add:
+
+- Distraction-free writing mode.
+- Adjustable editor width.
+- Adjustable font size.
+- Comfortable line spacing.
+- Word count.
+- Character count.
+- Optional focus mode.
+- Smooth scrolling.
+- Clear autosave status.
+
+## UI Polish
+
+Ensure:
+
+- Consistent spacing.
+- Readable typography.
+- Good keyboard focus states.
+- Accessible controls.
+- Responsive desktop layouts.
+- Useful empty states.
+- Proper loading indicators.
+- No layout shifts during editing.
+
+## Application Settings
+
+Provide settings for:
+
+- Theme.
+- Default editor font size.
+- Default editor width.
+- Autosave behavior.
+- Backup configuration.
+- Storage location information.
+- Export preferences.
+- Date display format.
+- Application information.
+
+Do not expose unsafe storage relocation without implementing a verified migration process.
+
+## Packaging
+
+Create development and production builds.
+
+Support Linux first.
+
+Prepare build configurations for Windows and macOS.
+
+Document:
+
+- Build requirements.
+- Runtime requirements.
+- Installation steps.
+- How data is stored.
+- How to back up data.
+- How to restore data.
+- How to uninstall without accidentally losing user data.
+
+## Tests
+
+Test:
+
+1. Development build.
+2. Production build.
+3. Launching the packaged application.
+4. Creating an entry in the packaged build.
+5. Importing attachments.
+6. Exporting data.
+7. Application restart.
+8. Keyboard shortcuts.
+9. Window resizing.
+10. Offline startup.
+
+STOP after Part 8.
+
+---
+
+# PART 9 — FUTURE AI-POWERED MEMORY SEARCH
+
+## Objective
+
+Prepare Solace for future AI functionality.
+
+Do not implement a full LLM integration yet.
+
+This part is primarily architectural.
+
+The goal is to make it possible to introduce AI later without restructuring the entire diary application.
+
+## Future Vision
+
+The user should eventually be able to ask natural-language questions about their journal.
+
+Examples:
+
+"When did I last visit Mumbai?"
+
+"What was I doing during the first week of November?"
+
+"What books did I mention reading in 2026?"
+
+"Find the day I talked about buying a new laptop."
+
+"What happened during my trip last December?"
+
+"Summarize my experiences from January to March."
+
+"How have my thoughts about my career changed over time?"
+
+"Find entries where I mentioned Rahul and an interview."
+
+## Future AI Features
+
+Plan for:
+
+1. Natural-language diary search.
+2. Semantic search.
+3. Automatic entry summaries.
+4. Date-aware retrieval.
+5. Entity extraction.
+6. People and location references.
+7. Related-memory discovery.
+8. Cross-entry question answering.
+9. Timeline summarization.
+10. Optional media understanding.
+
+## Retrieval Architecture
+
+Design future functionality around a retrieval-augmented generation architecture.
+
+Potential pipeline:
+
+User Question
+    ↓
+Query Understanding
+    ↓
+Date/Metadata Filtering
+    ↓
+Keyword + Semantic Retrieval
+    ↓
+Relevant Diary Excerpts
+    ↓
+LLM
+    ↓
+Answer with Source References
+
+Use a hybrid approach.
+
+Keyword search remains important.
+
+Semantic search should complement, not replace, SQLite FTS5.
+
+## Entry Chunking
+
+Plan for breaking long entries into smaller searchable chunks.
+
+Possible future data model:
+
+entry_chunks
+
+- id
+- entry_id
+- chunk_index
+- text
+- content_hash
+- created_at
+- updated_at
+
+The system should be able to rebuild chunks when an entry changes.
+
+Do not prematurely introduce complex background indexing.
+
+## Embeddings
+
+Future support should allow different embedding providers.
+
+Potential providers:
+
+- Local embedding models.
+- Optional external embedding APIs.
+
+Design an interface that does not tightly couple the database to a specific provider.
+
+Consider how to:
+
+- Store embeddings.
+- Version embedding models.
+- Rebuild indexes.
+- Identify stale embeddings.
+- Delete embeddings when entries are deleted.
+- Handle user opt-in.
+
+Do not require embeddings for ordinary diary use.
+
+## LLM Providers
+
+Future architecture should support:
+
+- Local LLMs through an optional local runtime.
+- Optional API-based providers.
+
+Possible local integration:
+
+Ollama or another compatible local inference engine.
+
+External APIs must be opt-in.
+
+Never send private diary content externally without explicit user approval.
+
+## Source-Grounded Answers
+
+Future AI answers must reference actual diary entries.
+
+Example:
+
+Question:
+
+"When did I last visit Mumbai?"
+
+Answer:
+
+"You mentioned visiting Mumbai between August 12 and August 15, 2026."
+
+Sources:
+
+- August 12–15, 2026 — Mumbai Trip
+
+Clicking the source should open the corresponding entry.
+
+The AI must distinguish between:
+
+- Information directly stated in entries.
+- Reasonable inferences.
+- Information not found.
+
+It must not invent memories.
+
+If the information cannot be found, say so.
+
+## Date-Aware Retrieval
+
+Multi-day entries must retain their date-range semantics.
+
+For example:
+
+Entry:
+November 15–20
+
+Question:
+"What happened on November 17?"
+
+This entry should be considered relevant.
+
+Do not rely solely on entry creation timestamps.
+
+## Privacy
+
+AI functionality must be optional.
+
+The core application should function without any AI model installed.
+
+Users should be able to disable AI functionality entirely.
+
+No background transmission of diary content.
+
+## Deliverables
+
+For Part 9:
+
+1. Create `docs/ai-architecture.md`.
+2. Define future interfaces.
+3. Document possible storage extensions.
+4. Explain retrieval design.
+5. Explain privacy boundaries.
+6. Explain indexing and rebuilding.
+7. Explain how multi-day entries affect retrieval.
+8. Provide an incremental implementation roadmap.
+
+Do not download large models.
+
+Do not introduce mandatory AI dependencies.
+
+Do not call paid APIs.
+
+STOP after Part 9.
+
+---
+
+# 3. Additional Features to Consider
+
+These features are optional and should not delay the main implementation.
+
+Evaluate them for future development.
+
+## Journaling Templates
+
+Examples:
+
+- Daily Reflection.
+- Weekly Review.
+- Travel Journal.
+- Book Notes.
+- Dream Journal.
+- Gratitude Journal.
+
+Users could create their own reusable templates.
+
+## People and Places
+
+Allow associating entries with people and places.
+
+Example:
+
+People:
+- Rahul
+- Amit
+
+Places:
+- Ahmedabad
+- Mumbai
+
+These could eventually help AI answer questions about relationships and experiences.
+
+Start with optional free-text metadata if structured entities would create unnecessary complexity.
+
+## Memory Connections
+
+Allow linking one diary entry to another.
+
+Example:
+
+"This entry is a continuation of my trip from November 12."
+
+Users should be able to navigate between linked entries.
+
+## On This Day
+
+Show memories from the same date in previous years.
+
+## Writing Statistics
+
+Optional statistics:
+
+- Total entries.
+- Total words.
+- Entries by month.
+- Days journaled.
+- Most frequently used tags.
+
+Do not gamify journaling excessively.
+
+## Custom Entry Covers
+
+Allow selecting a cover photograph for an entry.
+
+## Multiple Journals
+
+Future support for separate journals:
+
+- Personal
+- Travel
+- Work
+- Reading
+
+Avoid complicating the initial database model unless supporting this is straightforward.
+
+## Additional Importers
+
+Future support for importing:
+
+- Markdown folders.
+- JSON.
+- Other journaling application export formats.
+
+---
+
+# 4. Engineering Standards
+
+## Backend
+
+Use idiomatic Go.
+
+Prefer:
+
+- Small packages.
+- Clear service boundaries.
+- Explicit error handling.
+- Context-aware operations.
+- Parameterized SQL.
+- Transactions for related writes.
+- Proper resource cleanup.
+- Unit tests.
+
+Avoid unnecessary design patterns.
+
+## Frontend
+
+Use:
+
+- TypeScript strict mode.
+- Reusable components.
+- Accessible controls.
+- Clean state management.
+- Feature-based organization.
+
+Avoid excessive dependencies and global state.
+
+## Database
+
+Use migration files.
+
+Document schema decisions.
+
+Add indexes based on actual query requirements.
+
+Keep SQLite as the single source of truth.
+
+Avoid storing large media blobs directly inside SQLite.
+
+## Security
+
+Treat imported files as untrusted.
+
+Validate paths and inputs.
+
+Sanitize rendered content where necessary.
+
+Avoid dangerous HTML injection.
+
+Do not allow imported archives to write outside designated directories.
+
+Handle external links and file-opening operations safely.
+
+## Documentation
+
+Maintain:
+
+- README.md
+- docs/architecture.md
+- docs/database.md
+- docs/testing.md
+- docs/export-format.md
+- docs/ai-architecture.md
+
+Only create documents when their corresponding functionality exists or is being designed.
+
+Keep documentation synchronized with implementation.
+
+---
+
+# 5. Mandatory Testing and Development Workflow
+
+This is extremely important.
+
+Do not attempt to build the entire application in one execution.
+
+Work incrementally.
+
+For every part:
+
+### Step 1 — Inspect
+
+Inspect the existing codebase.
+
+Understand what has already been implemented.
+
+Do not rewrite working functionality unnecessarily.
+
+### Step 2 — Plan
+
+Briefly explain:
+
+- What will be implemented.
+- What files will change.
+- What database migrations are needed.
+- What tests will be added.
+- Any technical decisions that require explanation.
+
+### Step 3 — Implement
+
+Implement the current part completely.
+
+Avoid placeholders, fake data, and non-functional UI controls.
+
+Use mocked data only in tests or explicitly marked development fixtures.
+
+### Step 4 — Test
+
+Run the relevant automated tests.
+
+Add tests for the new functionality.
+
+Fix failures before reporting completion.
+
+If graphical UI testing is available, exercise the real application.
+
+Do not claim manual testing has been completed when it has not.
+
+### Step 5 — Report
+
+At the end of each part, provide:
+
+1. Features implemented.
+2. Files created or modified.
+3. Database changes.
+4. Automated tests performed.
+5. Automated test results.
+6. Manual tests I should perform.
+7. Known limitations.
+8. Instructions to run the application.
+
+### Step 6 — Stop
+
+STOP after completing the current part.
+
+Do not automatically proceed to the next part.
+
+Wait until I explicitly instruct you to continue.
+
+---
+
+# 6. Final Expectations
+
+Solace should eventually be:
+
+- Fully functional offline.
+- Reliable enough for everyday use.
+- Fast with thousands of entries.
+- Capable of storing years of journal entries.
+- Capable of storing photographs and videos.
+- Able to export everything into readable formats.
+- Able to restore complete backups.
+- Easy to navigate.
+- Pleasant to write in.
+- Private by default.
+- Extensible for future AI-powered memory retrieval.
+
+Do not sacrifice reliability for unnecessary complexity.
+
+This application may eventually contain years of irreplaceable personal memories.
+
+Data integrity and portability are therefore first-class requirements.
+
+---
+
+# INITIAL INSTRUCTION
+
+Begin with **Part 1 only**.
+
+First inspect the repository and development environment.
+
+Then:
+
+1. Verify Wails v3 compatibility.
+2. Confirm the Go and Node.js versions.
+3. Initialize or adapt the project.
+4. Configure the frontend.
+5. Configure SQLite.
+6. Establish the application architecture.
+7. Implement the initial interface.
+8. Add foundational tests.
+9. Run available automated checks.
+10. Explain how I can launch and test the application.
+
+If platform dependencies are missing, explain the exact installation requirements rather than silently substituting another framework.
+
+After completing Part 1, provide a concise implementation summary and stop.
+
+Do not begin Part 2 until I approve.
+
+---
+
+## Additional recommendations
+
+There are a few decisions I'd make now rather than leave until much later.
+
+### 1. Treat export and backup as different features
+
+This distinction matters a lot.
+
+**Export** produces something you can read independently of Solace. For example, a folder containing Markdown entries and their photographs.
+
+**Backup** produces something Solace can restore without losing metadata, formatting, relationships, or files.
+
+I recommend implementing both. SQLite provides supported mechanisms for creating consistent database snapshots, which should be used for backups rather than directly copying a database while it is being written to. [SQLite](https://www.sqlite.org/backup.html?utm_source=chatgpt.com)
+
+### 2. Keep dates separate from timestamps
+
+For your November 15–16 example, I would store:
+
+| Field | Value |
+|---|---|
+| Entry ID | `abc-123` |
+| Start date | 2026-11-15 |
+| End date | 2026-11-16 |
+| Created at | 2026-11-20 21:30 |
+| Updated at | 2026-11-21 10:15 |
+
+This makes querying historical events, calendar rendering, and future LLM retrieval much more reliable.
+
+### 3. Don't implement the LLM immediately
+
+Build the foundation first:
+
+**Phase A — Keyword search:** Find entries containing specific words using SQLite FTS5.
+
+**Phase B — Semantic search:** Find related content even when the exact words differ.
+
+**Phase C — AI memory retrieval:** Ask questions and get answers grounded in relevant entries.
+
+**Phase D — Memory analysis:** Summarize periods, identify recurring themes, and connect related experiences.
+
+I'd also keep the original diary entries immutable from the AI's perspective: AI should never silently rewrite what you recorded.
+
+### 4. Make the media library portable
+
+For photographs and videos, keep files on disk rather than directly in SQLite.
+
+For example:
+
+```text
+solace/
+├── solace.db
+├── media/
+│   ├── images/
+│   │   ├── 019a....jpg
+│   │   └── 019b....png
+│   ├── videos/
+│   │   └── 019c....mp4
+│   └── documents/
+├── thumbnails/
+└── backups/
+```
+
+This will make backups, exports, and migration to another computer much easier.
+
+---
+
+## How I'd use Codex for this project
+
+Give Codex the master prompt first. Once it finishes Part 1, manually launch the application and test it.
+
+Then continue with a small instruction such as:
+
+> Proceed with Part 2 of the Solace development plan. Preserve the existing implementation. Complete the entry CRUD functionality, date-range support, and associated tests. Stop when Part 2 is finished.
+
+Repeat for subsequent parts.
+
+**One change I'd consider to the development order:** Once Parts 1–3 work, implement a minimal full-backup/export feature before spending too much time polishing calendars and search. The moment you begin putting actual personal memories into Solace, being able to recover them should become a priority.
+
+My suggested first usable milestone is **Parts 1–3 plus basic export/backup**. At that point, you'll already have an offline diary where you can write, attach photographs and videos, save multi-day entries, and preserve your data independently of the application.

@@ -1,0 +1,16 @@
+[Desktop Entry]
+Version=1.0
+Name=Solace
+GenericName=Journal
+Comment=A private, local-first personal diary and memory archive
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/solace %u
+Terminal=false
+Type=Application
+Icon=solace
+Categories=Office;Utility;
+Keywords=Journal;Diary;Writing;Notes;Memories;
+StartupNotify=true
+StartupWMClass=solace
+
+ 
