@@ -44,7 +44,7 @@ export function TodayDashboard({ onNew, onOpenEntry }: { onNew: () => void; onOp
 function DashboardSection({ title, items, empty, onOpen }: { title:string; items:EntrySummary[]; empty:string; onOpen:(id:string)=>void }) {
   return <section className="dashboard-section"><div className="section-heading"><h3>{title}</h3><span className="count">{items.length}</span></div>
     {!items.length && <p className="muted-copy">{empty}</p>}
-    {items.map((entry) => <button key={entry.id} onClick={() => onOpen(entry.id)}><div><strong>{entry.title || 'Untitled entry'}</strong><p>{entry.preview || formatRange(entry)}</p></div><span className="summary-icons">{entry.pinned && <Pin size={12}/>} {entry.favorite && <Heart size={12}/>} {entry.attachmentCount > 0 && <Paperclip size={12}/>}</span></button>)}
+    {items.map((entry) => <button key={entry.id} onClick={() => onOpen(entry.id)}><div className="dashboard-entry-copy"><strong>{entry.title || 'Untitled entry'}</strong><p>{entry.preview || formatRange(entry)}</p></div><span className="summary-icons">{entry.pinned && <Pin size={12}/>} {entry.favorite && <Heart size={12}/>} {entry.attachmentCount > 0 && <Paperclip size={12}/>}</span></button>)}
   </section>
 }
 function formatRange(entry: EntrySummary) { return entry.startDate === entry.endDate ? entry.startDate : `${entry.startDate} – ${entry.endDate}` }

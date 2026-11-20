@@ -4,12 +4,14 @@ import { isWailsHost } from '../../lib/bridge'
 import { attachmentBridge } from './attachment-bridge'
 import { friendlyError } from '../../lib/user-errors'
 import type { Attachment } from './types'
+import { useConfirmation } from '../../components/ConfirmationDialog'
 
 export function AttachmentGallery({ entryID, readOnly, onImagesAdded }: {
   entryID: string
   readOnly: boolean
   onImagesAdded: (attachments: Attachment[]) => void
 }) {
+  const confirmAction = useConfirmation()
   const [attachments, setAttachments] = useState<Attachment[]>([])
   const [status, setStatus] = useState('')
   const [error, setError] = useState('')
@@ -46,7 +48,7 @@ export function AttachmentGallery({ entryID, readOnly, onImagesAdded }: {
     try { await attachmentBridge.reorder(entryID, next.map((item) => item.id)) } catch (reason) { setError(friendlyError(reason, 'The attachment order couldn’t be saved. Please try again.', 'reorder attachments')); await reload() }
   }
   const remove = async (attachment: Attachment) => {
-    if (!window.confirm(`Remove “${attachment.originalFilename}” from this entry?`)) return
+    if (!await confirmAction({ title:'Remove this attachment?', message:`Remove “${attachment.originalFilename}” from this entry? The copied file will be deleted from Solace.`, confirmLabel:'Remove attachment', tone:'danger' })) return
     try { await attachmentBridge.remove(attachment.id); await reload() } catch (reason) { setError(friendlyError(reason, 'That attachment couldn’t be removed. Please try again.', 'remove attachment')) }
   }
   const caption = async (attachment: Attachment, value: string) => {

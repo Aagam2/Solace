@@ -8,6 +8,7 @@ import { dataBridge } from './data-bridge'
 import { PrivacyPanel } from '../privacy/PrivacyPanel'
 import type { ExportFormat, Settings } from '../../types'
 import { friendlyError } from '../../lib/user-errors'
+import { useConfirmation } from '../../components/ConfirmationDialog'
 
 type Tab = 'export' | 'restore' | 'backups' | 'privacy'
 type ExportScope = 'entire' | 'date' | 'selected'
@@ -83,6 +84,7 @@ function ExportPanel({ hidden, settings, updateSettings }: { hidden:boolean; set
 }
 
 function RestorePanel({ hidden }: { hidden:boolean }) {
+  const confirmAction = useConfirmation()
   const [path, setPath] = useState('')
   const [summary, setSummary] = useState<ArchiveSummary | null>(null)
   const [replace, setReplace] = useState(false)
@@ -95,7 +97,7 @@ function RestorePanel({ hidden }: { hidden:boolean }) {
   }
   const restore = async () => {
     if (!path || !summary?.valid) return
-    if (replace && !window.confirm('Replace the current journal with this archive? Solace will create a recovery backup first.')) return
+    if (replace && !await confirmAction({ title:'Replace the current journal?', message:'Solace will create a recovery backup first, then replace current entries and attachments with this archive.', confirmLabel:'Replace journal', tone:'danger' })) return
     await operation.run(() => dataBridge.restore(path, replace))
   }
   return <div id="data-panel-restore" role="tabpanel" hidden={hidden} className="data-panel">

@@ -63,7 +63,7 @@ Complete archives contain a consistent SQLite snapshot created with SQLite's `VA
 
 Migration `007_safety.sql` adds:
 
-- `entry_revisions`, a cascading per-entry history table containing the prior saved rich-text document, plain text, dates, metadata, tags, source version, and save time. Application code retains the newest 20 rows per entry.
+- `entry_revisions`, a cascading per-entry recovery table containing the prior saved rich-text document, plain text, dates, metadata, tags, source version, and save time. Solace retains at most five rows per entry. A database trigger enforces the bound for imports as well as ordinary saves.
 - `privacy_settings`, a singleton containing only the application-lock state, random salt, password-derived hash, work factor, startup preference, and inactivity timeout. No plaintext password is stored.
 
 Before applying a pending migration to an existing database, startup writes a private SQLite snapshot beneath `backups/`. Migrations remain individually transactional. After migrations, startup runs `PRAGMA quick_check` and `pragma_foreign_key_check`; damage is reported without automatic deletion or repair.
@@ -72,4 +72,4 @@ Before applying a pending migration to an existing database, startup writes a pr
 
 The persisted settings are theme (`system`, `light`, or `dark`) and sidebar state. Settings and entry mutations use parameterized statements; multi-table entry/tag writes are transactional.
 
-Local database-test permission was granted on 2026-11-17. Automated tests and isolated native launches have verified all seven migrations, pre-migration snapshots, failed-migration rollback, entry/revision and attachment persistence, calendar/timeline/search queries, FTS rebuild and restart behavior, migration idempotency, backup/privacy settings, integrity failure detection, foreign keys, and private file permissions.
+Local database-test permission was granted on 2026-11-17. Automated tests have verified all eight migrations, pre-migration snapshots, failed-migration rollback, entry/revision and attachment persistence, calendar/timeline/search queries, FTS rebuild and restart behavior, migration idempotency, backup/privacy settings, integrity failure detection, foreign keys, and private file permissions.

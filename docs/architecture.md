@@ -75,7 +75,7 @@ Restore never trusts ZIP paths or the included database snapshot. It validates v
 
 ## Safety and lock flow
 
-Before pending migrations, existing databases receive a private SQLite snapshot. Every migration remains transactional, and integrity/foreign-key checks run after migration without automatic repair. Entry updates snapshot the previous saved state in the same transaction, then prune history to 20 versions.
+Before pending migrations, existing databases receive a private SQLite snapshot. Every migration remains transactional, and integrity/foreign-key checks run after migration without automatic repair. Meaningful entry updates can snapshot the previous saved state in the same transaction, at most once per ten-minute window. Application logic and a database trigger bound recovery history to five versions per entry.
 
 The privacy service stores only a salted PBKDF2-HMAC-SHA-256 derived hash and configuration. Lock state is process-local. React covers the journal with a focus-contained modal on startup, inactivity, or manual lock and exposes `Ctrl+Shift+L`. This is intentionally documented as a privacy screen, not encryption; native services and on-disk files are not cryptographically sealed.
 

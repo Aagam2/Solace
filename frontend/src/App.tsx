@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Archive, CalendarDays, ChevronLeft, Clock3, Heart, LockKeyhole, Menu, Moon, Plus, Search, Settings, Sun, Tag, Trash2 } from 'lucide-react'
 import { SolaceMark } from './components/SolaceMark'
+import { ConfirmationProvider } from './components/ConfirmationDialog'
 import { EntryWorkspace } from './features/entries/EntryWorkspace'
 import type { EntryView } from './features/entries/EntryWorkspace'
 import { CalendarView } from './features/navigation/CalendarView'
@@ -12,7 +13,7 @@ import { ApplicationSettingsPage } from './features/settings/ApplicationSettings
 import { LockScreen, usePrivacyGuard } from './features/privacy/PrivacyGuard'
 import { useSettings } from './hooks/use-settings'
 import { appBridge } from './lib/bridge'
-import type { AppInfo, DateFormat } from './types'
+import type { AppInfo } from './types'
 import type { Theme } from './types'
 
 const navigation = [
@@ -23,6 +24,10 @@ const navigation = [
 ]
 
 export default function App() {
+  return <ConfirmationProvider><SolaceApplication/></ConfirmationProvider>
+}
+
+function SolaceApplication() {
   const { settings, ready, setTheme, toggleSidebar, updateSettings } = useSettings()
   const [page, setPage] = useState('Today')
   const [newEntrySignal, setNewEntrySignal] = useState(0)
@@ -31,8 +36,6 @@ export default function App() {
   const [appInfo, setAppInfo] = useState<AppInfo | null>(null)
   const privacy = usePrivacyGuard()
   const collapsed = settings.sidebarCollapsed
-  const now = new Date()
-  const dayLabel = formatTopDate(now, settings.dateFormat)
   useEffect(() => { void appBridge.getInfo().then(setAppInfo) }, [])
   const startEntry = useCallback(() => {
     setPage('All entries')
@@ -67,7 +70,7 @@ export default function App() {
       </aside>
       <main>
         <header className="topbar">
-          <div><span className="eyebrow">{dayLabel}</span><h1>{page}</h1></div>
+          <h1>{page}</h1>
           <div className="global-actions"><div className="theme-switcher" aria-label="Theme">
             {(['light', 'system', 'dark'] as Theme[]).map((theme) => (
               <button key={theme} className={settings.theme === theme ? 'selected' : ''} onClick={() => setTheme(theme)} aria-label={`${theme} theme`}>
@@ -115,12 +118,6 @@ function useGlobalShortcuts({ enabled, startEntry, toggleSidebar, showSearch, sh
     window.addEventListener('keydown',onKeyDown)
     return () => window.removeEventListener('keydown',onKeyDown)
   }, [enabled, showSearch, showSettings, showToday, startEntry, toggleSidebar])
-}
-
-function formatTopDate(date:Date, format:DateFormat) {
-  if (format === 'iso') return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`
-  if (format === 'long') return new Intl.DateTimeFormat(undefined,{ weekday:'long', year:'numeric', month:'long', day:'numeric' }).format(date)
-  return new Intl.DateTimeFormat(undefined,{ weekday:'long', month:'long', day:'numeric' }).format(date)
 }
 
 function pageToEntryView(page: string): EntryView | null {

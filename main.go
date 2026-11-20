@@ -25,6 +25,11 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+//go:embed build/appicon.png
+var appIcon []byte
+
+const linuxApplicationID = "app.solace.desktop"
+
 func main() {
 	if err := run(context.Background()); err != nil {
 		fmt.Fprintf(os.Stderr, "Solace failed to start: %v\n", err)
@@ -72,7 +77,9 @@ func run(ctx context.Context) (runErr error) {
 	app := application.New(application.Options{
 		Name:        "Solace",
 		Description: "A private, local-first personal diary and memory archive",
+		Icon:        appIcon,
 		Logger:      logger,
+		LogLevel:    slog.LevelWarn,
 		Services: []application.Service{
 			application.NewService(service),
 			application.NewService(diaryService),
@@ -85,6 +92,9 @@ func run(ctx context.Context) (runErr error) {
 		},
 		Mac: application.MacOptions{
 			ApplicationShouldTerminateAfterLastWindowClosed: true,
+		},
+		Linux: application.LinuxOptions{
+			ApplicationID: linuxApplicationID,
 		},
 	})
 
@@ -119,6 +129,6 @@ func newLogger(logDir string) (*slog.Logger, io.WriteCloser, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("open application log: %w", err)
 	}
-	handler := slog.NewJSONHandler(io.MultiWriter(os.Stderr, file), &slog.HandlerOptions{Level: slog.LevelInfo})
+	handler := slog.NewJSONHandler(file, &slog.HandlerOptions{Level: slog.LevelInfo})
 	return slog.New(handler), file, nil
 }

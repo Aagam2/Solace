@@ -123,7 +123,7 @@ tasks:
       APP_NAME: '{{.APP_NAME}}'
       APP_BINARY: '../../../bin/{{.APP_NAME}}'
       ICON: '{{.APP_NAME}}.png'
-      DESKTOP_FILE: '../{{.APP_NAME}}.desktop'
+      DESKTOP_FILE: '../app.solace.desktop.desktop'
       OUTPUT_DIR: '../../../bin'
 
   create:deb:
@@ -170,17 +170,19 @@ tasks:
     dir: build
     cmds:
       - mkdir -p {{.ROOT_DIR}}/build/linux/appimage
-      - wails3 generate .desktop -name "{{.DISPLAY_NAME}}" -genericname "{{.GENERIC_NAME}}" -comment "{{.COMMENT}}" -exec "{{.EXEC}}" -icon "{{.ICON}}" -outputfile "{{.ROOT_DIR}}/build/linux/{{.APP_NAME}}.desktop" -categories "{{.CATEGORIES}}" -keywords "{{.KEYWORDS}}" -startupnotify
+      - wails3 generate .desktop -name "{{.DISPLAY_NAME}}" -genericname "{{.GENERIC_NAME}}" -comment "{{.COMMENT}}" -exec "{{.EXEC}}" -icon "{{.ICON}}" -outputfile "{{.ROOT_DIR}}/build/linux/{{.DESKTOP_ID}}.desktop" -categories "{{.CATEGORIES}}" -keywords "{{.KEYWORDS}}" -startupnotify
+      - sed -i '$a StartupWMClass={{.DESKTOP_ID}}' "{{.ROOT_DIR}}/build/linux/{{.DESKTOP_ID}}.desktop"
     vars:
       APP_NAME: '{{.APP_NAME}}'
+      DESKTOP_ID: 'app.solace.desktop'
       DISPLAY_NAME: 'Solace'
       GENERIC_NAME: 'Journal'
       COMMENT: 'A private, local-first personal diary and memory archive'
       EXEC: '{{.APP_NAME}}'
       ICON: '{{.APP_NAME}}'
-      CATEGORIES: 'Office;Utility;'
+      CATEGORIES: 'Office;'
       KEYWORDS: 'Journal;Diary;Writing;Notes;Memories;'
-      OUTPUTFILE: '{{.ROOT_DIR}}/build/linux/{{.APP_NAME}}.desktop'
+      OUTPUTFILE: '{{.ROOT_DIR}}/build/linux/{{.DESKTOP_ID}}.desktop'
 
   run:
     cmds:

@@ -21,6 +21,7 @@ __pycache__/
 /frontend/dist/*
 !/frontend/dist/.gitkeep
 /build/linux/solace.desktop
+/build/linux/app.solace.desktop.desktop
 /build/windows/icon.ico
 /build/darwin/icons.icns
 /build/darwin/Assets.car

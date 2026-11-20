@@ -61,6 +61,10 @@ func (s *Service) GetEntry(ctx context.Context, id string) (Entry, error) {
 }
 
 func (s *Service) UpdateEntry(ctx context.Context, id string, input EntryInput, expectedVersion int64) (Entry, error) {
+	return s.updateEntry(ctx, id, input, expectedVersion, false)
+}
+
+func (s *Service) updateEntry(ctx context.Context, id string, input EntryInput, expectedVersion int64, forceRevision bool) (Entry, error) {
 	input, err := validateInput(input)
 	if err != nil {
 		return Entry{}, err
@@ -75,7 +79,7 @@ func (s *Service) UpdateEntry(ctx context.Context, id string, input EntryInput, 
 		return Entry{}, fmt.Errorf("begin entry update: %w", err)
 	}
 	defer tx.Rollback()
-	if err := recordRevision(ctx, tx, id, expectedVersion, now); err != nil {
+	if err := recordRevision(ctx, tx, id, input, tags, expectedVersion, now, forceRevision); err != nil {
 		return Entry{}, err
 	}
 	result, err := tx.ExecContext(ctx, `UPDATE entries SET

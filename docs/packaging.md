@@ -4,6 +4,8 @@ Solace is a Wails v3 desktop application. Linux is the first supported packaging
 
 The checked-in `build/solace-icon.svg` is the editable source for the application identity. `build/appicon.png` is its 1024 px raster source for Wails; builds generate `build/windows/icon.ico` and `build/darwin/icons.icns`. The Linux package installs a 128 px launcher icon, while `frontend/public/solace-icon.svg` and the compact React mark keep browser and in-app identity consistent. Keep the generous transparent safe area when changing the artwork so platform masks do not clip it.
 
+Linux uses `app.solace.desktop` as the GTK/Wayland application ID. The package installs `/usr/share/applications/app.solace.desktop.desktop`, whose desktop ID and `StartupWMClass` match that runtime identity, and installs `solace.png` into the hicolor icon theme. Post-install and post-remove hooks refresh the desktop and icon caches. This matching is required for GNOME to group the window under the Solace launcher instead of displaying Wails’ fallback identity or a generic icon. Running an unpackaged binary before installing its desktop entry can still bypass shell integration; install the generated package before judging launcher behavior.
+
 ## Build requirements
 
 All platforms require:

@@ -13,7 +13,9 @@ The active log rotates at 2 MiB. Solace retains at most five numbered backups (`
 
 ## What is recorded
 
-The JSON log includes application startup and shutdown information, Wails runtime messages, scheduled-backup failures, journal health-check failures, unexpected Go panics with a stack trace, returned startup/runtime errors, and handled frontend operation failures. Frontend reports use a short area label such as `save entry` or `inspect archive` so a failure can be located without showing implementation language to the user.
+The JSON log includes application startup and shutdown information, Wails runtime messages, scheduled-backup failures, journal health-check failures, unexpected Go panics with a stack trace, returned startup/runtime errors, and handled frontend operation failures. Frontend reports use a short area label such as `save entry` or `inspect archive` so a failure can be located without showing implementation language to the user. Normal structured INFO messages are written to this file rather than copied to the terminal.
+
+When the unpackaged binary is started from a terminal, WebKitGTK or the Mesa graphics driver may still print their own diagnostic warnings directly to standard error. These lines do not come from Solace’s logger. They are normally harmless and are not visible when Solace is opened from its installed application-menu launcher.
 
 Solace must never intentionally send journal text, entry titles, passwords, attachment contents, or other private form values to the log. The frontend reports only the technical error supplied by an operation. Browser-preview errors go to the browser developer console because no native data directory is open.
 

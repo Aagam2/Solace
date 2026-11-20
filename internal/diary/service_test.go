@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"solace/internal/database"
 )
@@ -92,9 +93,12 @@ func TestBoundedRevisionHistoryAndRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for index := 0; index < 24; index++ {
+	for index := 0; index < 8; index++ {
 		entry, err = service.UpdateEntry(ctx, entry.ID, EntryInput{Title: fmt.Sprintf("Version %d", index+1), ContentText: fmt.Sprintf("Body %d", index+1), StartDate: entry.StartDate, Tags: []string{"Private"}}, entry.Version)
 		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := service.db.ExecContext(ctx, `UPDATE entry_revisions SET saved_at=? WHERE entry_id=?`, time.Now().UTC().Add(-revisionInterval-time.Minute).Format(time.RFC3339Nano), entry.ID); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -116,6 +120,52 @@ func TestBoundedRevisionHistoryAndRecovery(t *testing.T) {
 	revisions, err = service.ListRevisions(ctx, entry.ID)
 	if err != nil || len(revisions) != revisionLimit || revisions[0].Title != entry.Title {
 		t.Fatalf("history after restore = %+v, %v", revisions, err)
+	}
+}
+
+func TestRevisionHistorySkipsNoiseAndCanBeDeleted(t *testing.T) {
+	service := testService(t)
+	ctx := context.Background()
+	entry, err := service.CreateEntry(ctx, EntryInput{Title: "Original", ContentText: "First version", StartDate: "2026-11-18"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry, err = service.UpdateEntry(ctx, entry.ID, EntryInput{Title: entry.Title, ContentText: entry.ContentText, StartDate: entry.StartDate, Favorite: true, Pinned: true}, entry.Version)
+	if err != nil {
+		t.Fatal(err)
+	}
+	revisions, err := service.ListRevisions(ctx, entry.ID)
+	if err != nil || len(revisions) != 0 {
+		t.Fatalf("organizational update revisions = %+v, %v", revisions, err)
+	}
+	entry, err = service.UpdateEntry(ctx, entry.ID, EntryInput{Title: "Meaningful edit", ContentText: entry.ContentText, StartDate: entry.StartDate, Favorite: true, Pinned: true}, entry.Version)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry, err = service.UpdateEntry(ctx, entry.ID, EntryInput{Title: "Rapid follow-up", ContentText: "Changed again", StartDate: entry.StartDate, Favorite: true, Pinned: true}, entry.Version)
+	if err != nil {
+		t.Fatal(err)
+	}
+	revisions, err = service.ListRevisions(ctx, entry.ID)
+	if err != nil || len(revisions) != 1 || revisions[0].Title != "Original" {
+		t.Fatalf("throttled revisions = %+v, %v", revisions, err)
+	}
+	if err := service.DeleteRevision(ctx, entry.ID, revisions[0].ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.DeleteRevision(ctx, entry.ID, revisions[0].ID); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("deleting missing revision error = %v", err)
+	}
+	entry, err = service.UpdateEntry(ctx, entry.ID, EntryInput{Title: "Another edit", ContentText: entry.ContentText, StartDate: entry.StartDate}, entry.Version)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.ClearRevisions(ctx, entry.ID); err != nil {
+		t.Fatal(err)
+	}
+	revisions, err = service.ListRevisions(ctx, entry.ID)
+	if err != nil || len(revisions) != 0 {
+		t.Fatalf("cleared revisions = %+v, %v", revisions, err)
 	}
 }
 

@@ -82,6 +82,35 @@ test('manual save cancels the pending autosave without a stale write', async () 
   expect(screen.queryByText('Save failed')).not.toBeInTheDocument()
 })
 
+test('queues rapid edits made while an entry save is still finishing', async () => {
+  render(<App />)
+  fireEvent.click(screen.getByRole('button', { name:'New entry' }))
+  const title = await screen.findByRole('textbox', { name:'Entry title' })
+  fireEvent.change(title, { target:{ value:'A quick sequence' } })
+  fireEvent.click(screen.getByRole('button', { name:'Save' }))
+  fireEvent.click(screen.getByRole('button', { name:'Toggle favorite' }))
+  fireEvent.click(screen.getByRole('button', { name:'Toggle pinned' }))
+  fireEvent.click(screen.getByRole('button', { name:'Save' }))
+
+  await waitFor(() => expect(screen.getByText('Saved')).toBeInTheDocument(), { timeout:2500 })
+  const stored = JSON.parse(localStorage.getItem('solace.entries') ?? '[]') as Array<{ title:string; favorite:boolean; pinned:boolean }>
+  expect(stored[0]).toMatchObject({ title:'A quick sequence', favorite:true, pinned:true })
+  expect(screen.queryByText('Save failed')).not.toBeInTheDocument()
+})
+
+test('does not mark a saved entry as changed when reading mode opens', async () => {
+  localStorage.setItem('solace.entries', JSON.stringify([previewEntry('reading-1','Quiet reading','Nothing changed here.',[])]))
+  render(<App />)
+  fireEvent.click(screen.getByRole('button', { name:'All entries' }))
+  await screen.findByRole('textbox', { name:'Entry title' })
+  fireEvent.click(screen.getByRole('button', { name:'Read' }))
+
+  expect(await screen.findByRole('button', { name:'Exit reading' })).toBeInTheDocument()
+  expect(screen.getByText('Saved')).toBeInTheDocument()
+  expect(screen.queryByText('Unsaved changes')).not.toBeInTheDocument()
+  expect(screen.queryByText('Save failed')).not.toBeInTheDocument()
+})
+
 test('searches partial words and opens the matching entry', async () => {
   localStorage.setItem('solace.entries', JSON.stringify([
     previewEntry('career-1','Career day','Had an interview today.',['Work']),
@@ -135,7 +164,7 @@ test('imports files dropped onto the media drop zone', async () => {
 test('keeps data management compact with export, restore, and backup tabs', async () => {
   render(<App />)
   fireEvent.click(screen.getByRole('button', { name:'Settings' }))
-  expect(await screen.findByRole('heading', { name:'Application settings' })).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { name:'Settings' })).toBeInTheDocument()
   fireEvent.click(screen.getByRole('tab', { name:'Data & safety' }))
   expect(screen.getByRole('tab', { name:'Export' })).toHaveAttribute('aria-selected', 'true')
   fireEvent.click(screen.getByRole('tab', { name:'Restore' }))
@@ -159,7 +188,7 @@ test('supports global desktop shortcuts for creating, saving, searching, and set
   fireEvent.keyDown(window, { key:'k', ctrlKey:true })
   expect(await screen.findByRole('textbox', { name:'Search journal' })).toHaveFocus()
   fireEvent.keyDown(window, { key:',', ctrlKey:true })
-  expect(await screen.findByRole('heading', { name:'Application settings' })).toBeVisible()
+  expect(await screen.findByRole('heading', { name:'Settings' })).toBeVisible()
 })
 
 test('persists writing preferences and applies them to the editor surface', async () => {
@@ -188,14 +217,16 @@ test('shows live writing counts and exits distraction-free mode with Escape', as
   expect(screen.getByRole('region', { name:'Journal entries' })).not.toHaveClass('focus-mode')
 })
 
-test('keeps bounded saved versions and restores an earlier entry revision', async () => {
-  window.confirm = () => true
+test('spaces recovery versions and restores an earlier meaningful revision', async () => {
   render(<App />)
   fireEvent.click(screen.getByRole('button', { name:'New entry' }))
   const title = await screen.findByRole('textbox', { name:'Entry title' })
   fireEvent.change(title, { target:{ value:'First saved title' } })
   fireEvent.click(screen.getByRole('button', { name:'Save' }))
   await waitFor(() => expect(screen.getByText('Saved')).toBeInTheDocument())
+  const savedVersions = JSON.parse(localStorage.getItem('solace.revisions') ?? '[]') as Array<{ savedAt:string }>
+  savedVersions[0].savedAt = new Date(Date.now() - 11 * 60 * 1000).toISOString()
+  localStorage.setItem('solace.revisions', JSON.stringify(savedVersions))
   fireEvent.change(title, { target:{ value:'Second saved title' } })
   fireEvent.click(screen.getByRole('button', { name:'Save' }))
   await waitFor(() => expect(screen.getByText('Saved')).toBeInTheDocument())
@@ -205,7 +236,21 @@ test('keeps bounded saved versions and restores an earlier entry revision', asyn
   const revision = earlier.closest('article')
   expect(revision).not.toBeNull()
   fireEvent.click(within(revision as HTMLElement).getByRole('button', { name:'Restore' }))
+  fireEvent.click(await screen.findByRole('button', { name:'Restore version' }))
   expect(await screen.findByRole('textbox', { name:'Entry title' })).toHaveValue('First saved title')
+})
+
+test('uses a Solace confirmation dialog for destructive actions', async () => {
+  localStorage.setItem('solace.entries', JSON.stringify([previewEntry('trash-1','Private draft','A private note',[])]))
+  render(<App />)
+  fireEvent.click(screen.getByRole('button', { name:'All entries' }))
+  const journal = await screen.findByRole('region', { name:'Journal entries' })
+  fireEvent.click(within(journal).getByRole('button', { name:'Trash' }))
+  await waitFor(() => expect(within(journal).queryByText('Private draft')).not.toBeInTheDocument())
+  fireEvent.click(screen.getByRole('button', { name:'Trash' }))
+  fireEvent.click(await screen.findByRole('button', { name:'Delete forever' }))
+  expect(await screen.findByRole('alertdialog', { name:'Delete this entry forever?' })).toBeVisible()
+  expect(screen.getByRole('button', { name:'Cancel' })).toHaveFocus()
 })
 
 test('labels the application lock as a privacy screen rather than encryption', () => {

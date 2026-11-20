@@ -20,8 +20,8 @@ func TestOpenInitializesAndReopensDatabase(t *testing.T) {
 		if err := db.QueryRow(`SELECT COUNT(*) FROM schema_migrations`).Scan(&migrations); err != nil {
 			t.Fatal(err)
 		}
-		if migrations != 7 {
-			t.Fatalf("migration count = %d, want 7", migrations)
+		if migrations != 8 {
+			t.Fatalf("migration count = %d, want 8", migrations)
 		}
 		info, err := os.Stat(path)
 		if err != nil {

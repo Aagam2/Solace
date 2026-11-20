@@ -8,6 +8,7 @@ import { diaryBridge, toInput } from './diary-bridge'
 import type { Attachment, Entry, EntryInput, ListOptions, Revision } from './types'
 import type { DateFormat } from '../../types'
 import { friendlyError } from '../../lib/user-errors'
+import { useConfirmation } from '../../components/ConfirmationDialog'
 
 export type EntryView = 'today' | 'all' | 'favorites' | 'trash'
 type EditorTab = 'writing' | 'details' | 'history'
@@ -20,6 +21,7 @@ const emptyInput = (date: string): EntryInput => ({
 export function EntryWorkspace({ view, preferredEntryID, newEntrySignal, onNewEntryHandled, autosaveDelayMs, dateFormat }: {
   view:EntryView; preferredEntryID?:string; newEntrySignal:number; onNewEntryHandled:()=>void; autosaveDelayMs:number; dateFormat:DateFormat
 }) {
+  const confirmAction = useConfirmation()
   const [entries, setEntries] = useState<Entry[]>([])
   const [selected, setSelected] = useState<Entry | null>(null)
   const [form, setForm] = useState<EntryInput>(() => emptyInput(today()))
@@ -163,15 +165,25 @@ export function EntryWorkspace({ view, preferredEntryID, newEntrySignal, onNewEn
   const trash = async () => { if (selected) { try { await diaryBridge.trash(selected.id); await reload() } catch (reason) { setError(friendlyError(reason, 'This entry couldn’t be moved to Trash. Please try again.', 'trash entry')) } } }
   const restore = async () => { if (selected) { try { await diaryBridge.restore(selected.id); await reload() } catch (reason) { setError(friendlyError(reason, 'This entry couldn’t be restored. Please try again.', 'restore entry')) } } }
   const remove = async () => {
-    if (selected && window.confirm('Permanently delete this entry? This cannot be undone.')) {
+    if (selected && await confirmAction({ title:'Delete this entry forever?', message:'This permanently removes the entry and its attachments. This cannot be undone.', confirmLabel:'Delete forever', tone:'danger' })) {
       try { await attachmentBridge.permanentlyDeleteEntry(selected.id); await reload() } catch (reason) { setError(friendlyError(reason, 'This entry couldn’t be permanently deleted. Nothing was changed.', 'delete entry')) }
     }
   }
   const duplicate = async () => { if (selected) { try { const entry = await diaryBridge.duplicate(selected.id); await reload(entry.id) } catch (reason) { setError(friendlyError(reason, 'This entry couldn’t be duplicated. Please try again.', 'duplicate entry')) } } }
   const restoreRevision = async (revision: Revision) => {
-    if (!selected || dirty || !window.confirm(`Restore the version saved ${formatTimestamp(revision.savedAt)}? Your current saved version will remain in history.`)) return
+    if (!selected || dirty || !await confirmAction({ title:'Restore this version?', message:`Restore the version saved ${formatTimestamp(revision.savedAt)}? Your current saved version will remain in recovery history.`, confirmLabel:'Restore version' })) return
     try { const restored = await diaryBridge.restoreRevision(selected.id, revision.id, selected.version); await reload(restored.id) }
     catch (reason) { setError(friendlyError(reason, 'That saved version couldn’t be restored. Your current entry is unchanged.', 'restore entry version')); setStatus('error') }
+  }
+  const deleteRevision = async (revision:Revision) => {
+    if (!selected || !await confirmAction({ title:'Delete this recovery version?', message:`Delete the version saved ${formatTimestamp(revision.savedAt)}? Your current entry will not change.`, confirmLabel:'Delete version', tone:'danger' })) return
+    try { await diaryBridge.deleteRevision(selected.id, revision.id); setRevisions((current) => current.filter((item) => item.id !== revision.id)) }
+    catch (reason) { setError(friendlyError(reason, 'That saved version couldn’t be deleted. Please try again.', 'delete entry version')) }
+  }
+  const clearRevisions = async () => {
+    if (!selected || !await confirmAction({ title:'Clear recovery history?', message:'Delete every saved version for this entry? Your current entry will not change, but this history cannot be recovered.', confirmLabel:'Clear history', tone:'danger' })) return
+    try { await diaryBridge.clearRevisions(selected.id); setRevisions([]) }
+    catch (reason) { setError(friendlyError(reason, 'Saved versions couldn’t be cleared. Please try again.', 'clear entry history')) }
   }
   const changeSort = async (next: ListOptions['sort']) => {
     if (dirty && await save() === null) return
@@ -240,8 +252,8 @@ export function EntryWorkspace({ view, preferredEntryID, newEntrySignal, onNewEn
             <AttachmentGallery key={`${selected.id}-${attachmentRevision}`} entryID={selected.id} readOnly={view === 'trash' || readingMode} onImagesAdded={insertImportedImages} />
           </div>
           <div id="editor-panel-history" className="revision-panel" role="tabpanel" aria-labelledby="editor-tab-history" hidden={readingMode || editorTab !== 'history'}>
-            <div className="revision-heading"><div><History size={17}/><span><strong>Saved versions</strong><small>Solace keeps the 20 most recent saved versions, not every keystroke.</small></span></div>{dirty && <em>Save current changes before restoring.</em>}</div>
-            {revisions.length === 0 ? <div className="revision-empty">Earlier saved versions will appear here after you edit this entry.</div> : <div className="revision-list">{revisions.map((revision) => <article key={revision.id}><div><time>{formatTimestamp(revision.savedAt)}</time><strong>{revision.title || 'Untitled entry'}</strong><p>{revision.contentText || 'A blank page'}</p><small>Version {revision.sourceVersion}{revision.tags.length ? ` · ${revision.tags.join(', ')}` : ''}</small></div><button type="button" disabled={dirty || view === 'trash'} onClick={() => void restoreRevision(revision)}><RotateCcw size={14}/>Restore</button></article>)}</div>}
+            <div className="revision-heading"><div><History size={17}/><span><strong>Recovery history</strong><small>Up to 5 meaningful versions, spaced at least 10 minutes apart.</small></span></div><div className="revision-heading-actions">{dirty && <em>Save current changes before restoring.</em>}{revisions.length > 0 && <button type="button" className="revision-clear" onClick={() => void clearRevisions()}><Trash2 size={13}/>Clear history</button>}</div></div>
+            {revisions.length === 0 ? <div className="revision-empty">Recovery versions will appear here after meaningful changes to your writing or entry details.</div> : <div className="revision-list">{revisions.map((revision) => <article key={revision.id}><div><time>{formatTimestamp(revision.savedAt)}</time><strong>{revision.title || 'Untitled entry'}</strong><p>{revision.contentText || 'A blank page'}</p><small>Version {revision.sourceVersion}{revision.tags.length ? ` · ${revision.tags.join(', ')}` : ''}</small></div><div className="revision-actions"><button type="button" disabled={dirty || view === 'trash'} onClick={() => void restoreRevision(revision)}><RotateCcw size={14}/>Restore</button><button type="button" className="revision-delete" onClick={() => void deleteRevision(revision)} aria-label={`Delete version saved ${formatTimestamp(revision.savedAt)}`} title="Delete this saved version"><Trash2 size={14}/></button></div></article>)}</div>}
           </div>
         </fieldset>
       </>}

@@ -1,6 +1,6 @@
 # Development status
 
-Last updated: 2026-11-19
+Last updated: 2026-11-20
 
 ## Current checkpoint: Part 8 desktop experience and packaging (complete)
 
@@ -71,14 +71,14 @@ Last updated: 2026-11-19
 - Added the compact tabbed Data Management interface under Settings with Export, Restore, and Backups panels, keyboard tab navigation, native file/folder dialogs, progress states, cancellation, and browser-preview guidance.
 - Added explicit frontend regression coverage for media drag-and-drop and confirmed the existing picker, native OS drop, and paste workflows remain available.
 - Documented the archive format, restore safety model, backup behavior, testing matrix, and Part 6 checkpoint.
-- Added migration `007_safety.sql` with bounded entry revisions and privacy-lock configuration.
+- Added migration `007_safety.sql` with entry revisions and privacy-lock configuration, followed by `008_revision_retention.sql` to trim existing history and enforce a five-version ceiling.
 - Added private SQLite snapshots before pending migrations on existing profiles, transactional failure tests, startup integrity/foreign-key checks, and a read-only health action in Settings.
-- Added the newest 20 saved revisions per entry, captured in the same transaction as updates, with accessible History browsing and revision restore that preserves the current saved version.
+- Added accessible recovery-history browsing and restore, then tightened retention to five meaningful versions spaced at least ten minutes apart. History now supports deleting one recovery point or clearing an entry's history while leaving the current entry unchanged.
 - Upgraded portable export format to version 2 so complete archives and JSON include revision history while version 1 archives remain accepted.
 - Added an optional password privacy screen with random salts, standard PBKDF2-HMAC-SHA-256 derivation, constant-time verification, startup locking, 1–60 minute inactivity locking, manual locking, and `Ctrl+Shift+L`.
 - Clearly labeled the application lock as a privacy screen rather than database/media encryption; no plaintext password is stored.
 - Added the compact Privacy & safety tab with lock configuration, native-only controls, integrity status, responsive light/dark styling, and accessible focus containment on the unlock dialog.
-- Added focused tests for migration backup/failure, integrity damage, unwritable storage, lock lifecycle/validation, bounded revision recovery, browser revision restore, and revision-aware archive round trips.
+- Added focused tests for migration backup/failure, integrity damage, unwritable storage, lock lifecycle/validation, meaningful and throttled revision recovery, individual/bulk history deletion, browser revision restore, and revision-aware archive round trips.
 - Documented privacy boundaries, recovery behavior, migration safety, reliability coverage, and remaining encryption work.
 - Added platform-aware global shortcuts for new entry, save, search, Today, sidebar, reading mode, and Settings, with discoverable shortcut references.
 - Added editable focus mode, preserved read-only reading mode, Escape dismissal, smooth/reduced-motion-aware scrolling, and live word/character counts.
@@ -92,6 +92,13 @@ Last updated: 2026-11-19
 - Added a private size-based JSON log writer with a 2 MiB active-file limit, five retained backups, startup rotation, fatal-error reporting, and panic stack capture.
 - Documented the log location, retention bound, privacy expectations, and support workflow in `docs/logging.md`.
 - Curated `.gitignore` for local agent/Codex/AWS state, dependencies, tool caches, compiled packages, generated platform icons, runtime journal data, test output, and editor clutter; restored `master_prompt.txt` as a trackable implementation checkpoint while keeping bindings, lockfiles, icon sources, packaging templates, and documentation trackable.
+- Replaced Wails’ derived Linux identity `org.wails.solace` with `app.solace.desktop`, matched the generated desktop filename and `StartupWMClass`, embedded the application icon bytes, added desktop/icon cache refresh hooks, and rebuilt Debian release `0.1.0-2` so GNOME can group the window under the Solace launcher and icon.
+- Kept structured INFO diagnostics in the private rotating log instead of echoing them to the terminal; WebKitGTK/JavaScriptCore and Mesa may still emit harmless native-library warnings when the raw binary is launched from a terminal.
+- Reworked the desktop density after a UI review: the fixed page header is now 62 px with an 18 px title, oversized duplicate Settings artwork was removed, Settings uses a compact 1000 px tabbed work surface, and cards/controls use tighter spacing while retaining readable body text.
+- Replaced every browser-native destructive confirmation with a keyboard-accessible Solace alert dialog that traps focus, supports Escape/cancel, returns focus to the originating control, and uses user-facing action copy.
+- Fixed long Today-dashboard summaries escaping their cards by allowing the flex text column to shrink and clipping/ellipsizing the preview within measured card bounds.
+- Prevented Tiptap from reporting a false content edit when entering or leaving reading mode by suppressing update emission during editable-state changes.
+- Completed a fresh isolated browser-preview walkthrough with two disposable journal entries across writing, details, tags, moods, favorites, pinning, Today, search, calendar, timeline, history, reading/focus modes, Trash empty state, Settings tabs, light/dark themes, and custom confirmations. No real SQLite journal or external service was used.
 
 ### Verification completed
 
@@ -107,10 +114,11 @@ Last updated: 2026-11-19
 
 - The initial frontend dependency set was installed from the local npm cache; Tailwind, shadcn/ui, and their dependencies were subsequently installed by the user.
 - Frontend strict type-check: passed.
-- Frontend unit tests: 18 passed, including autosave race prevention, tabbed editor navigation, explicit media drag-and-drop, revision recovery, lock-screen disclosure, friendly error translation, hidden technical details, partial-word search/direct opening, tag rename propagation, data/safety tabs, database-health states, global shortcuts, persisted writing preferences, writing counts, and focus-mode dismissal.
+- Frontend unit tests: 21 passed, including autosave race prevention, queued rapid edits, tabbed editor navigation, read-mode save stability, application confirmations, explicit media drag-and-drop, revision recovery, lock-screen disclosure, friendly error translation, hidden technical details, partial-word search/direct opening, tag rename propagation, data/safety tabs, database-health states, global shortcuts, persisted writing preferences, writing counts, and focus-mode dismissal.
 - Frontend ESLint: passed.
 - Frontend production build: passed with React and Tiptap/ProseMirror split into cacheable vendor chunks.
 - Branding/error-copy browser review: passed at 1240 x 780 and 800 x 600; the mark remains legible in the full and collapsed sidebars and at 32 px launcher size.
+- Density/confirmation/overflow browser review: passed in dark and light themes at 1280 px and the 800 x 600 Wails minimum. Both the editor and compact Settings view had zero document-level horizontal overflow; a long dashboard preview measured fully inside its parent card; reading mode remained `Saved`; and browser console output contained no application errors.
 - Go platform filesystem tests: passed.
 - All Go packages and database test sources compile (`go test ./internal/... -run '^$'` with network disabled).
 - Full Go test suite passed after database-test permission was granted; first run, reopen, migrations, settings persistence, validation, and the frontend contract are covered.
@@ -121,7 +129,7 @@ Last updated: 2026-11-19
 - The navigation performance fixture passed with 10,000 entries, 2,000 tags, and 2,000 attachment records; timeline queries remain bounded and paginated.
 - Search/backend tests passed for creation, editing, deletion, multiple words, empty/special queries, overlap ranges, combined filters, tag CRUD, rebuild, restart, attachment captions, and 5,000 entries.
 - Portable-data/backend tests passed for all four export formats, empty and populated journals, inclusive and selected scopes, attachments, manifests/checksums, unsafe paths, invalid-restore isolation, recovery backups, retention, and a 100-entry export/restore round trip.
-- Part 7 backend tests passed for migration snapshots and rollback, integrity/foreign-key damage, unwritable storage, password hashing and lock lifecycle, 20-version retention and restore, and revision-aware archive round trips.
+- Part 7 backend tests passed for migration snapshots and rollback, integrity/foreign-key damage, unwritable storage, password hashing and lock lifecycle, bounded revision retention and restore, and revision-aware archive round trips. The retention policy was later tightened to five meaningful versions at most once per ten minutes, with user-controlled deletion.
 - `go vet ./...`: passed.
 - Go race detector: app, attachments, and database packages passed; the synthetic diary package was stopped because race instrumentation made its large fixtures impractically slow. The full normal suite passes.
 - Production `wails3 build`: passed after Part 3; native binary created at `bin/solace`.
@@ -139,7 +147,7 @@ Last updated: 2026-11-19
 - Part 8 production build and two isolated launches: passed using `/tmp/solace-part8-native`; the final settings/writing assets were served by GTK4/WebKitGTK 6.0 without network access.
 - Linux Debian package: generated at `bin/solace.deb` (approximately 6.4 MB), inspected successfully, with declared GTK4/WebKitGTK 6.0 dependencies and hardened packaged file modes.
 - Branded production build and isolated native launch: passed using `/tmp/solace-brand-native.cJJeGk`; `solace.log` was created as `0600`, embedded assets loaded, and the rebuilt Debian package contained the branded 128 px icon plus user-facing desktop metadata.
-- SQLite integrity and foreign-key checks: clean; migrations `001_foundation.sql` through `007_safety.sql`, the FTS5 table, all nine synchronization triggers, and insert/update/delete index maintenance were verified.
+- SQLite integrity and foreign-key checks: clean in the last native verification; migrations through `007_safety.sql`, the FTS5 table, all nine synchronization triggers, and insert/update/delete index maintenance were verified there. Migration `008_revision_retention.sql` is verified with temporary-database automated tests and awaits the next user-approved native build check.
 - Native filesystem check: all owned directories `0700`, database/log/storage files `0600`.
 - Production npm dependency audit: 0 vulnerabilities after updating Vite to 6.4.6 and classifying build tools as development dependencies.
 - Development-only tooling still reports advisories during installation. They are not shipped in the runtime; rerun the full audit before release and avoid forced breaking dependency changes without a dedicated compatibility pass.

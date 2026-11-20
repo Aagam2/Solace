@@ -8,9 +8,9 @@ Exec=/usr/local/bin/solace %u
 Terminal=false
 Type=Application
 Icon=solace
-Categories=Office;Utility;
+Categories=Office;
 Keywords=Journal;Diary;Writing;Notes;Memories;
 StartupNotify=true
-StartupWMClass=solace
+StartupWMClass=app.solace.desktop
 
  

@@ -9,6 +9,12 @@ else
   echo "Warning: update-desktop-database command not found. Desktop file may not be immediately recognized." >&2
 fi
 
+# Refresh the shared icon cache so the Solace launcher icon is available
+# immediately after installation or upgrade.
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+  gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor
+fi
+
 # Update MIME database for custom URL schemes (x-scheme-handler)
 # This ensures the system knows how to handle your custom protocols.
 if command -v update-mime-database >/dev/null 2>&1; then

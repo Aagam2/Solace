@@ -25,9 +25,9 @@ The lock is **not database or media encryption**. Someone who can access the ope
 
 ## Entry recovery
 
-Trash remains recoverable until explicit permanent deletion. In addition, each successful entry update stores the previous saved state—including rich text, dates, metadata, and tags—in `entry_revisions`. Solace retains the newest 20 revisions per entry. This captures meaningful saves after the autosave debounce, not every keystroke.
+Trash remains recoverable until explicit permanent deletion. For entry recovery, Solace stores the previous saved state only when writing or meaningful details change and at least ten minutes have elapsed since the last automatic recovery point. Favorite, pin, draft-status, and ordering changes do not create noise. Solace retains at most five versions per entry; people can delete one version or clear an entry's recovery history without changing the current entry. Restoring always preserves the current saved state first when it differs.
 
-Restoring a revision goes through the normal optimistic update path, so the current saved state becomes another recoverable revision. Complete archives use export format version 2 and include revision history; version 1 archives remain accepted with an empty history.
+Restoring a revision goes through the normal optimistic update path, so a different current saved state becomes another recoverable revision. Complete archives use export format version 2 and include revision history; version 1 archives remain accepted with an empty history.
 
 ## Reliability boundaries
 

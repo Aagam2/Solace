@@ -48,7 +48,7 @@ export function RichTextEditor({ contentJSON, readOnly, insertImage, onChange, o
     onUpdate:({ editor:updated }) => onChange(JSON.stringify(updated.getJSON()), updated.getText({ blockSeparator:'\n' })),
   }, [onFiles])
 
-  useEffect(() => { editor?.setEditable(!readOnly) }, [editor, readOnly])
+  useEffect(() => { editor?.setEditable(!readOnly, false) }, [editor, readOnly])
   useEffect(() => {
     if (!editor || editor.isDestroyed) return
     const next = parseDocument(contentJSON)

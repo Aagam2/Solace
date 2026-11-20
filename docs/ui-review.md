@@ -1,6 +1,6 @@
 # UI review checkpoint
 
-Last updated: 2026-11-18
+Last updated: 2026-11-20
 
 ## Scope
 
@@ -52,6 +52,8 @@ The suggested community Wails skill was not installed because its Linux dependen
 - Rebuilt native binary launch with `XDG_DATA_HOME=/tmp/solace-visual-final`: passed.
 
 ## Remaining visual work
+
+- Density and dialog follow-up completed on 2026-11-20: reduced the fixed page header to 62 px, replaced oversized Settings presentation with a compact tabbed work surface, tightened controls without shrinking body text below a comfortable desktop size, contained long dashboard previews, and replaced JavaScript confirms with an accessible Solace alert dialog. A fresh two-entry browser walkthrough covered all primary navigation destinations, search, calendar/timeline, history, reading/focus modes, light/dark themes, and Settings. At 800 x 600, the editor and Settings had no document-level horizontal overflow. The walkthrough also found and fixed a Tiptap read-mode false-dirty transition.
 
 - Part 6 follow-up completed on 2026-11-18: Settings now uses a compact Export/Restore/Backups tab set rather than a long page. The dark-theme constrained-width pass confirmed readable hierarchy, no horizontal overflow, clear disabled browser-preview states, and contained internal scrolling; the production native window also launched successfully at its 1240 × 780 default with an 800 × 600 minimum.
 - Part 7 follow-up completed on 2026-11-18: the fourth Privacy & safety tab and entry History tab were reviewed in light/dark rendered states and at the 800 × 600 viewport. The warning hierarchy, disabled browser-preview controls, revision rows, tab focus order, and internal scrolling remained clear. The isolated GTK application launched successfully, but this environment lacked `scrot`, `gnome-screenshot`, and `xdotool`, so native-window image capture was unavailable; native startup and embedded assets were verified separately from the rendered browser screenshots.

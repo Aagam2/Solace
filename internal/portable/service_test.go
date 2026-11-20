@@ -102,7 +102,7 @@ func TestReadableAndCompleteExports(t *testing.T) {
 	if err := json.Unmarshal(data, &exported); err != nil {
 		t.Fatal(err)
 	}
-	if len(exported.Entries) != 12 || len(exported.Attachments) != 3 || len(exported.SchemaVersions) != 7 {
+	if len(exported.Entries) != 12 || len(exported.Attachments) != 3 || len(exported.SchemaVersions) != 8 {
 		t.Fatalf("unexpected JSON export: %+v", exported)
 	}
 

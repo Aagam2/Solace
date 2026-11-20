@@ -13,12 +13,20 @@ export function CalendarMonth(month: string): $CancellablePromise<$models.Calend
     return $Call.ByID(389263323, month);
 }
 
+export function ClearRevisions(entryID: string): $CancellablePromise<void> {
+    return $Call.ByID(2452957320, entryID);
+}
+
 export function CreateEntry(input: $models.EntryInput): $CancellablePromise<$models.Entry> {
     return $Call.ByID(2034067563, input);
 }
 
 export function CreateTag(name: string): $CancellablePromise<$models.Tag> {
     return $Call.ByID(3172853355, name);
+}
+
+export function DeleteRevision(entryID: string, revisionID: string): $CancellablePromise<void> {
+    return $Call.ByID(745757715, entryID, revisionID);
 }
 
 export function DeleteTag(id: string): $CancellablePromise<void> {

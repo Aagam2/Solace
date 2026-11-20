@@ -24,7 +24,7 @@ Solace is a private, local-first desktop journal and memory archive. **Parts 1â€
 - Markdown, offline HTML, versioned JSON, and complete restorable archive exports for the full journal, date ranges, or selected entries.
 - Preflight archive inspection, checksums, path-traversal protection, transactional replacement, and automatic pre-restore recovery archives.
 - Manual, daily, or weekly local backups with a configurable destination, attachment inclusion, and retention.
-- Recoverable trash plus the 20 most recent saved revisions per entry, including revision-aware complete archives.
+- Recoverable trash plus up to five meaningful recovery versions per entry, with user-controlled history cleanup and revision-aware complete archives.
 - Startup database integrity/foreign-key checks, transactional migrations, and private pre-migration database snapshots.
 - Optional startup, inactivity, and manual application lock using a salted standard password hash, clearly separated from future file encryption.
 - Light, dark, and system theme selection with a collapsible sidebar.

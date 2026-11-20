@@ -5,8 +5,10 @@ import type { Status } from '../../../bindings/solace/internal/privacy/models'
 import { appBridge } from '../../lib/bridge'
 import { announcePrivacyChange, privacyBridge } from './privacy-bridge'
 import { friendlyError } from '../../lib/user-errors'
+import { useConfirmation } from '../../components/ConfirmationDialog'
 
 export function PrivacyPanel({ hidden }: { hidden:boolean }) {
+  const confirmAction = useConfirmation()
   const [status, setStatus] = useState<Status>({ enabled:false, locked:false, lockOnStart:false, inactivityMinutes:0 })
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -29,7 +31,7 @@ export function PrivacyPanel({ hidden }: { hidden:boolean }) {
     finally { setBusy(false) }
   }
   const disable = async () => {
-    if (!window.confirm('Disable the Solace privacy lock? Your journal will open without a password.')) return
+    if (!await confirmAction({ title:'Disable the privacy lock?', message:'Solace will open without asking for a password. Your journal data will not be deleted.', confirmLabel:'Disable lock', tone:'danger' })) return
     setBusy(true); setError(''); setMessage('')
     try { const next = await privacyBridge.disable(currentPassword); setStatus(next); setCurrentPassword(''); setMessage('Privacy lock disabled.'); announcePrivacyChange(next) }
     catch (reason) { setError(friendlyError(reason, 'The privacy lock couldn’t be turned off. Please try again.', 'disable privacy lock')) }

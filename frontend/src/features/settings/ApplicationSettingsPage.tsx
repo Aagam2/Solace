@@ -29,10 +29,6 @@ export function ApplicationSettingsPage({ settings, appInfo, updateSettings }: {
     selectTab(tabs[nextIndex].id)
   }
   return <section className="settings-page" aria-label="Application settings">
-    <header className="settings-intro">
-      <div><span className="eyebrow">Make Solace feel like yours</span><h2>Application settings</h2><p>Writing, appearance, backups, and local application details in one place.</p></div>
-      <Settings2 size={30}/>
-    </header>
     <div className="settings-workspace">
       <div className="settings-tabs" role="tablist" aria-label="Settings sections">
         {tabs.map(({ id, label, icon:Icon }) => <button key={id} ref={(node) => { tabRefs.current[id] = node }} role="tab" aria-selected={tab === id} aria-controls={`settings-panel-${id}`} tabIndex={tab === id ? 0 : -1} onKeyDown={(event) => onTabKey(event,id)} onClick={() => setTab(id)}><Icon size={16}/>{label}</button>)}
@@ -60,7 +56,7 @@ function GeneralPanel({ hidden, settings, updateSettings }: PanelProps) {
 
 function WritingPanel({ hidden, settings, updateSettings }: PanelProps) {
   return <div id="settings-panel-writing" role="tabpanel" hidden={hidden} className="settings-panel writing-settings">
-    <div className="settings-panel-heading"><h3>Your writing room</h3><p>Adjust the page without changing the content saved in your journal.</p></div>
+    <div className="settings-panel-heading"><h3>Writing</h3><p>Adjust the page without changing the content saved in your journal.</p></div>
     <div className="writing-settings-grid">
       <div className="setting-control"><label htmlFor="editor-font-size"><strong>Text size</strong><small>{settings.editorFontSize}px</small></label><input id="editor-font-size" type="range" min="14" max="24" step="1" value={settings.editorFontSize} onChange={(event) => updateSettings({ editorFontSize:Number(event.target.value) })}/></div>
       <label className="setting-control"><span><strong>Line spacing</strong><small>Give longer entries room to breathe.</small></span><select aria-label="Editor line spacing" value={settings.editorLineSpacing} onChange={(event) => updateSettings({ editorLineSpacing:Number(event.target.value) })}><option value="1.5">Compact</option><option value="1.75">Comfortable</option><option value="1.9">Airy</option><option value="2.1">Very airy</option></select></label>
